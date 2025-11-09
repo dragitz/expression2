@@ -1,0 +1,78 @@
+@name Wood destroyer
+@outputs Fire Damage
+@persist Woods:array [Turret TargetWood]:entity CurrentWoodIndex
+
+
+if(first() | dupefinished())
+{
+    #entity():setName("\n":repeat(100))
+    propSpawnUndo(0)
+    
+    Fire = 0
+    Damage = 50
+    
+    CurrentWoodIndex = 1
+
+    
+    TurretData = table(
+        "force" = 1,
+        "tracernum" = 0,
+        "delay" = 0,
+        "Model" = "",
+        "tracer" = 0,
+        "sound" = 0,
+        "damage" = 10,
+        "numbullets" = 1,
+        "spread" = 0
+    )
+    
+    Turret = sentSpawn("gmod_wire_turret", TurretData)
+    Turret:createWire(entity(),"Fire","Fire")
+    Turret:createWire(entity(),"Damage","Damage")
+    
+    Turret:propNotSolid(1)
+    Turret:propFreeze(1)
+
+    function collectWood()
+    {
+        findByModel("models/props_phx/construct/wood*")
+        Woods = findToArray()
+        foreach(Index:number, Entity:entity = Woods)
+        {
+            local Current = Entity
+            local RandomID = random(1,Woods:count())
+            Woods[Index,entity] = Woods[RandomID,entity]
+            Woods[RandomID,entity] = Current
+        }
+    }
+    collectWood()
+     
+    TargetWood = Woods[1,entity] ?: noentity()
+}
+
+event tick()
+{
+    Fire = 0
+    const Count = Woods:count()
+    
+    if(CurrentWoodIndex > Count & findCanQuery() | !Count)
+    {
+        CurrentWoodIndex = 1
+        collectWood()
+        exit()
+    }
+    TargetWood = Woods[CurrentWoodIndex,entity]
+    # switch to next target
+    if(!TargetWood:isValid()){ CurrentWoodIndex += 1, exit() }
+    
+    # teleport on top of wood
+    Turret:setPos(TargetWood:boxCenterW()+vec(random(-30,30),random(-30,30),random(-10,10)))
+    
+    # aim at wood
+    Direction = TargetWood:boxCenterW() - Turret:boxCenterW()
+    Turret:setAng(Direction:toAngle())
+    
+    
+    Fire = 1
+
+}

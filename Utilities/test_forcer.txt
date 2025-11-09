@@ -1,0 +1,35 @@
+@name test
+
+@outputs Velocity
+@persist Forcer:entity Prop:entity Tick Victim:entity
+
+Tick = 0
+Forcer = entity():isWeldedTo()
+
+Victim = findPlayerByName("ljtwjo")
+#Victim = findPlayerBySteamID("STEAM_0:1:575609848")
+
+Prop = propSpawn("models/hunter/blocks/cube025x025x025.mdl",entity():pos()+vec(0,0,100),1)
+Prop:setAlpha(0)
+
+if(!Victim:isValid()){print("Victim isn't valid")}
+event tick()
+{
+    if(Victim:isAlive() & Victim:pos():isInWorld() & ->Velocity)
+    {
+        Forcer:setAlpha(0)
+        Forcer:propNotSolid(1)
+        
+        Forcer:setPos(Victim:pos())
+        #Prop:setPos(Victim:pos()+vec(0,0,Victim:height()+10))
+        
+        if(!Tick){Velocity = 100000000}else{Velocity = -Velocity}
+        
+        Velocity = 100000000
+        
+        Tick += 1
+        
+        if(Tick > 1){Tick = 0}
+    }
+    
+}

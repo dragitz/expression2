@@ -1,0 +1,104 @@
+@name Anti Wire Jail 4.0 
+@persist [CHAIR Jailer Explosive]:entity DistanceTriggered
+
+#[
+    The goal is to always kill your jailer and be able to freely move
+]#
+
+if(first() | dupefinished())
+{
+    CHAIR = seatSpawn("models/nova/chair_plastic01.mdl", entity():pos()+vec(0,0,30),ang(0,0,0),1)
+    #CHAIR:propNotSolid(1)
+    CHAIR:propFreeze(1)
+    #CHAIR:setAlpha(0)
+    
+    CHAIR:setAng(ang(180,0,0))
+    CHAIR:setCollisionGroup(_COLLISION_GROUP_WEAPON)
+    
+    Jailer = noentity()
+    Explosive = noentity()
+    
+    DistanceTriggered = 0
+}
+
+event playerSpawn(Player:entity) {
+    if(Player != owner()){ exit() }
+    
+    if(!Explosive:isValid() | !Jailer:isValid())
+    {
+        Jailer = noentity()
+        Explosive = noentity()
+        exit()
+    }
+    
+    CHAIR:setPos(Jailer:pos()+vec(0,0,0))
+    CHAIR:use()
+}
+
+event tick()
+{
+    
+    const MAX = 20
+    if (Jailer:isValid() & Explosive:isValid() & Jailer:isAlive() & owner():isAlive()) {
+
+        const Distance = Jailer:pos():distance(Explosive:pos())
+        
+        if(Distance >= 10)
+        {
+            CHAIR:setPos(Jailer:pos() + vec(0, 0, 30))
+        }else
+        {
+             CHAIR:setPos(Jailer:pos() + vec(0, 0, 0))
+        }
+        exit()
+        if (DistanceTriggered >= MAX) {
+            # Back to safety
+            CHAIR:setPos(Jailer:pos() + vec(0, 0, 0))
+            DistanceTriggered = 0
+            exit()
+        }
+
+        if (DistanceTriggered >= 1 && DistanceTriggered < MAX) {
+            # Boost phase (+30)
+            CHAIR:setPos(Jailer:pos() + vec(0, 0, 30))
+            DistanceTriggered += 1
+            exit()
+        }
+
+        if (Distance > 10 & DistanceTriggered == 0) {
+            # Presence tick at +0 so explosive sees you
+            CHAIR:setPos(Jailer:pos() + vec(0, 0, 0))
+            DistanceTriggered = 1
+            exit()
+        }
+
+        # Idle/default
+        CHAIR:setPos(Jailer:pos() + vec(0, 0, 50))
+    }
+}
+
+
+event playerDeath(Victim:entity, Inflictor:entity, Attacker:entity) {
+    if(Victim != owner()){ exit() }
+    
+    if(Jailer:isValid() & Explosive:isValid()){ exit() }
+    
+    #print(Inflictor:getConstraints())
+    
+    # Specific to Wire Jailers
+    if(Inflictor:type() == "gmod_wire_simple_explosive")
+    {
+        Ents = Inflictor:getConnectedEntities()
+        for(I=1,Ents:count())
+        {
+            if(Ents[I,entity]:type() == "gmod_wire_teleporter" && Ents[I,entity]:pos():distance(Inflictor:pos()) <= 15)
+            {
+                Explosive = Ents[I,entity]
+                Jailer = Explosive:owner()
+    
+                print("You have been targeted by a Wire Jailer: " + Jailer:name())
+            }
+
+        }
+    }
+}

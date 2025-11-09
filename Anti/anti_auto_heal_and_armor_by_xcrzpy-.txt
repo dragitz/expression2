@@ -1,0 +1,269 @@
+@name Anti/Anti Auto Heal and Armor by xCrzpy-
+@persist [ChipName ChipOwners]:table Cubes:array MaxProps
+
+# Debug
+@persist BestAngles:array
+@persist CollisionPerSecond MaxCollisions [Best]:array Kit:entity Tick Testing Existed
+
+if(first())
+{
+    
+    entity():propFreeze(1)
+    
+    MaxCollisions = 0
+    CollisionPerSecond = 0
+    Kit = noentity()
+    
+    Tick = 0
+    Existed = 0
+    Testing = 1
+    
+    MaxProps = 10
+    
+    entity():setName("Nope.")
+    ChipName = table(
+        "Auto Heal and Armor by xCrzpy-" = 1
+    )
+    ChipOwners = table()
+    
+    Best = array()
+    Cubes = array()
+    #BestAngles = array(ang(123.527,216.039,336.514), ang(162.719,243.92,156.402), ang(18.8466,3.01616,94.7093), ang(228.083,32.2223,196.442))
+    #BestAngles = array(ang(291.81,267.175,54.1242), ang(-14.1804,-42.6348,90.5251), ang(-29.8515,64.5055,14.0324), ang(14.542,-41.3547,-65.0968), ang(-72.4434,133.848,130.068), ang(26.4311,112.265,56.3603))
+    #BestAngles =	array(ang(313.446,254.036,144.498), ang(293.742,78.7401,141.241),ang(50.8064,-42.8758,-38.2078), ang(127.575,311.401,230.768),ang(18.7481,169.065,-99.6727), ang(5.25234,11.8004,-71.4856))
+    BestAngles = array(ang(-74.39,-86.2016,160.085), ang(-29.2467,159.203,-88.455), ang(-72.0263,-82.3162,66.8045), ang(48.7973,93.1326,129.609), ang(75.0764,39.7664,-102.179), ang(-53.6233,-43.1808,-79.3485), ang(-86.8562,113.349,49.0737), ang(-38.8313,9.8257,179.604), ang(84.8571,-170.998,156.841), ang(-79.0123,92.4883,42.6878))
+
+    
+    #if(!Cubes[1,entity]:isValid()){ print("Cube 1 failed to spawn! Respawn"), selfDestructAll()}
+    entity():setPos(entity():pos()+vec(0,0,100))  
+    
+    # Find chip owners
+    function checkOwners()
+    {
+        # Reset everyone
+        const Keys = ChipOwners:keys()
+        for(I=1,Keys:count())
+        {
+            const SteamID = Keys[I,string]
+            ChipOwners[SteamID,number] = 0
+        }
+        
+        # Now find it
+        findByClass("gmod_wire_expression2")
+        const Array = findToArray()
+        for(I=1,Array:count())
+        {
+            const Name = Array[I,entity]:getName()
+            const SteamID = Array[I,entity]:owner():steamID()
+            if(ChipName[Name,number])
+            {
+                ChipOwners[SteamID,number] = 1
+                
+                #print(Array[I,entity]:owner())
+            }
+        }
+    }
+    
+    concmd("gm_spawnsent item_healthkit") #debug
+    
+    # Auto check if user has removed it
+    #timer("timer",1000)
+}
+
+if(clk("timer"))
+{
+    checkOwners()
+
+    
+
+    #if(!Kit:isValid()){ exit() } # debug
+    
+    
+
+    
+    # Ensure kit is not frozen
+    Kit:propFreeze(0)
+    
+    # Setup new collision
+    for(I=1,4)
+    {
+        #local RandAng = ang(random(0,360),random(0,360),random(0,360))
+        #Cubes[I,entity]:setAng(RandAng)
+    }
+    
+    timer("timer",1000)
+}
+
+event entityCreated(Entity:entity) {
+    
+    # We need to find a way to invalidate the entity
+    # And we only have one tick to do it as the next one is going to get teleported to the player
+    
+    # Triggering an anti crash to delete the prop could be a solution
+    # Only way is to create lots of collisions
+    #    - ragdolls can do it, but teleporting one to the prop isn't easy
+    #    - multiple cubes in a specific rotation touching the entity
+    if(Entity:type() != "item_healthkit" || Entity:owner() != owner()){ exit() }
+    
+    if(Kit:isValid()){ exit() } #debug
+    Kit = Entity
+    Existed = 1
+    #[
+    Distance = 15
+    Cubes[1,entity]:setPos(Kit:boxCenterW()+vec(Distance,0,0))
+    Cubes[2,entity]:setPos(Kit:boxCenterW()+vec(-Distance,0,0))
+    Cubes[3,entity]:setPos(Kit:boxCenterW()+vec(0,Distance,0))
+    Cubes[4,entity]:setPos(Kit:boxCenterW()+vec(0,-Distance,0))
+    ]#
+    trackCollision(Entity)
+    #print("Tracked")
+    
+    #[
+
+    Tick based + 6 cubes
+    30	 - 	array(ang(-72.3466,37.0905,52.3659), ang(14.1863,118.101,64.706), ang(71.898,150.684,-155.285), ang(81.1938,-102.426,142.382), ang(-89.5018,-147.63,79.6778), ang(48.0522,112.694,124.24))
+    
+    Tick based + 10 cubes
+    38	 - 	array(ang(58.1437,-19.0846,-6.69989), ang(30.9447,-100.739,67.1017), ang(12.0825,-77.7568,-80.839), ang(8.91211,-34.0539,77.8332), ang(23.6403,179.73,6.3132), ang(-38.2399,3.2873,-175.247), ang(0.104318,151.751,-124.658), ang(82.6903,24.3018,3.87285), ang(58.8726,-50.1928,-14.9971), ang(-32.9225,-90.4214,73.3083))
+    39	 - 	array(ang(9.71842,23.004,-14.6437), ang(73.2141,170.265,89.7621), ang(-52.7135,-40.2407,156.604), ang(-21.6042,-108.379,171.33), ang(-73.6844,125.675,-149.789), ang(-35.3423,-93.6515,48.0502), ang(65.2564,-7.88562,-1.92462), ang(2.48408,-175.851,90.6432), ang(50.4428,-97.1677,148.397), ang(82.5814,50.4312,146.967))
+    39	 - 	array(ang(58.043,123.052,-68.5773), ang(37.8258,-16.4634,-15.8642), ang(-6.97987,-146.178,-68.3315), ang(28.9648,77.2172,108.011), ang(42.9055,72.4384,170.831), ang(72.2978,77.3851,-80.7389), ang(30.1938,11.0796,127.977), ang(-45.2705,144.886,-137.911), ang(-46.9326,-123.461,65.8963), ang(58.1262,123.336,-160.433))
+    40	 - 	array(ang(-41.7246,47.3508,-114.917), ang(6.86847,20.1213,-158.916), ang(89.7315,-69.9966,-47.0138), ang(-80.0514,145.975,-38.3309), ang(-13.1651,136.308,67.5031), ang(71.996,149.654,82.0212), ang(-50.4623,162.712,-61.1703), ang(87.6283,150.638,167.164), ang(-60.9759,-14.7256,-30.1017), ang(8.31917,-159.064,-8.46317))
+    40	 - 	array(ang(-63.8511,96.9983,-1.39932), ang(59.9033,-116.981,-58.9125), ang(52.6547,148.205,178.866), ang(27.4988,-37.3751,-10.8566), ang(84.89,163.235,111.482), ang(-5.30019,-137.287,-107.988), ang(1.62718,-122.144,-133.35), ang(-31.3305,-46.754,-11.2363), ang(53.0002,-162.068,-50.5426), ang(-51.2558,-132.692,6.30103))
+    43	 - 	array(ang(88.0482,156.526,-140.922), ang(-21.129,149.462,-84.1393), ang(11.6798,44.7358,164.456), ang(37.7293,73.8149,-50.2128), ang(-54.2309,160.056,-169.303), ang(-69.5925,-143.093,113.604), ang(72.9616,-53.6659,114.121), ang(-49.9942,-65.0993,93.3022), ang(73.8695,25.683,-72.3393), ang(83.9204,115.691,-152.97))
+    44	 - 	array(ang(-2.1521,-78.9698,-52.2842), ang(25.4492,-78.0408,-14.061), ang(-42.96,12.8893,5.50391), ang(-14.1322,-156.208,-164.286), ang(62.5814,179.26,-36.1891), ang(-16.4383,-30.1385,131.231), ang(49.2953,-124.534,-109.012), ang(-32.1034,-73.4637,172.04), ang(-37.1916,-124.642,40.1311), ang(15.0437,22.3054,6.62968))
+    44	 - 	array(ang(-74.39,-86.2016,160.085), ang(-29.2467,159.203,-88.455), ang(-72.0263,-82.3162,66.8045), ang(48.7973,93.1326,129.609), ang(75.0764,39.7664,-102.179), ang(-53.6233,-43.1808,-79.3485), ang(-86.8562,113.349,49.0737), ang(-38.8313,9.8257,179.604), ang(84.8571,-170.998,156.841), ang(-79.0123,92.4883,42.6878))
+
+    ]#
+}
+
+
+event tick()
+{
+    
+    if(Cubes:count() < MaxProps)
+    {
+        if(propCanCreate())
+        {
+            #Prop = propSpawn("models/hunter/blocks/cube025x025x025.mdl",entity():pos()+vec(0,0,50),1)
+            #Prop = propSpawn("models/xeon133/slider/slider_12x12x12.mdl",entity():pos()+vec(0,0,50),1)
+            #Prop = propSpawn("models/props_phx/gears/bevel9.mdl",entity():pos()+vec(0,0,50),1)
+            Prop = propSpawn("models/props_phx/gears/bevel9.mdl",entity():pos()+vec(0,0,50),1)
+            Prop:propFreeze(1)
+            
+            if(Prop:isValid())
+            {
+                #Prop:setAng(ang(random(45,90),random(45,90),random(45,90)))
+                #Prop:setAlpha(0)
+                #Prop:setCollisionGroup(_COLLISION_GROUP_PASSABLE_DOOR)
+                #Prop:setAng(Angles[Props:count()+1,angle])
+                
+                Cubes:pushEntity(Prop)
+            }
+        }
+    }elseif(Kit:isValid())
+    {
+        Kit:propFreeze(0)
+        
+        
+        #print(Cubes:count())
+        Distance = 0.01
+        Cubes[1,entity]:setPos(Kit:boxCenterW()+vec(Distance,0,0))
+        Cubes[2,entity]:setPos(Kit:boxCenterW()+vec(-Distance,0,0))
+        Cubes[3,entity]:setPos(Kit:boxCenterW()+vec(0,Distance,0))
+        Cubes[4,entity]:setPos(Kit:boxCenterW()+vec(0,-Distance,0))
+        Cubes[5,entity]:setPos(Kit:boxCenterW()+vec(0,0,Distance))
+        Cubes[6,entity]:setPos(Kit:boxCenterW()+vec(0,0,-Distance))
+        
+        Cubes[7,entity]:setPos(Kit:boxCenterW()+vec(0,0,-Distance))
+        Cubes[8,entity]:setPos(Kit:boxCenterW()+vec(Distance,0,0))
+        Cubes[9,entity]:setPos(Kit:boxCenterW()+vec(-Distance,0,0))
+        Cubes[10,entity]:setPos(Kit:boxCenterW()+vec(0,0,Distance))
+        
+        
+        if(Existed & !Kit:isValid()){ Testing = 0, selfDestructAll(), exit()}
+
+        if(Testing)
+        {
+            if(Tick == 0)
+            {
+                
+                    RandAng = ang(random(0,360),random(0,360),random(0,360))
+                    Cubes[1,entity]:setAng(RandAng)
+                    RandAng = ang(random(0,360),random(0,360),random(0,360))
+                    Cubes[2,entity]:setAng(RandAng)
+                    RandAng = ang(random(0,360),random(0,360),random(0,360))
+                    Cubes[3,entity]:setAng(RandAng)
+                    RandAng = ang(random(0,360),random(0,360),random(0,360))
+                    Cubes[4,entity]:setAng(RandAng)
+                    RandAng = ang(random(0,360),random(0,360),random(0,360))
+                    Cubes[5,entity]:setAng(RandAng)
+                    RandAng = ang(random(0,360),random(0,360),random(0,360))
+                    Cubes[6,entity]:setAng(RandAng)
+                    RandAng = ang(random(0,360),random(0,360),random(0,360))
+                    Cubes[7,entity]:setAng(RandAng)
+                    RandAng = ang(random(0,360),random(0,360),random(0,360))
+                    Cubes[8,entity]:setAng(RandAng)
+                    RandAng = ang(random(0,360),random(0,360),random(0,360))
+                    Cubes[9,entity]:setAng(RandAng)
+                    RandAng = ang(random(0,360),random(0,360),random(0,360))
+                    Cubes[10,entity]:setAng(RandAng)
+                
+                
+                Tick += 1
+            }else
+            {
+                # Store best rotation
+                if(CollisionPerSecond > MaxCollisions)
+                { 
+                    MaxCollisions = CollisionPerSecond
+                    
+                    for(I=1,10)
+                    {
+                        Best[I,angle] = Cubes[I,entity]:angles()
+                    }
+                    
+                    # notify huge collisions
+                    if(MaxCollisions >= 50)
+                    {
+                        print(MaxCollisions, " - ", Best)
+                    }
+                }
+                
+                entity():setName("Record: " +  MaxCollisions + " - Now: "+CollisionPerSecond)
+                CollisionPerSecond = 0
+                Tick = 0
+            }
+        }else
+        {
+            for(I=1,6){
+                #Cubes[I,entity] = propSpawn("models/hunter/blocks/cube025x025x025.mdl",entity():pos()+vec(0,0,50),1)
+                Cubes[I,entity]:setAng(BestAngles[I,angle])
+                #Cubes[I,entity]:setMass(_INF)
+                
+                #trackCollision(Cubes[I,entity])
+            }
+        }
+        
+    }
+    
+    #owner():plySetHealth(MaxCollisions)
+}
+event entityCollision(Entity:entity, HitEntity:entity, CollisionData:collision) {
+    
+    if(Entity == Kit)
+    {
+        CollisionPerSecond += 1
+    }
+}
+
+event removed(Resetting:number) {
+    
+    if(MaxCollisions >= 50)
+    {
+        print(MaxCollisions, " - ", Best)
+    }
+}
+
+
+
+

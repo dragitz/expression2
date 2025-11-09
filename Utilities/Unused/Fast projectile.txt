@@ -1,0 +1,59 @@
+@name 
+@persist ProjectileEnt:entity Target:entity Rando1 Rando2 Rando3
+
+if(first())
+{
+    Target = noentity()
+    
+    ProjectileEnt = noentity()
+}
+
+event tick()
+{
+
+    if(findCanQuery() & perf() & !ProjectileEnt:isValid())
+    {
+        #findIncludeClass("prop_combine_ball")
+                    findIncludeClass("npc_grenade_frag")
+                    findIncludeClass("prop_combine_ball")
+                    findIncludeClass("m9k_nervegasnade")
+                    findIncludeClass("m9k_thrown_harpoon")
+                    findIncludeClass("m9k_m202_rocket")
+                    findIncludeClass("m9k_proxy")
+                    findIncludeClass("m9k_gdcwa_rpg_heat")        
+        
+        findInSphere(owner():pos(), 250)
+        ProjectileEnt = find()
+
+    }
+    
+
+    if(ProjectileEnt:isValid())
+    {
+        
+        #ProjectileEnt:applyForce(ProjectileEnt:velL() * 11100)
+        #ProjectileEnt:setMass(inf())
+        
+
+        Players = players()
+        for(I=1,Players:count())
+        {
+            Target = Players[I,entity]
+            if(Target == owner() | !Target:isAlive()){ continue }
+            
+            for(Q=1,20)
+            {
+                Rando1 = randint(-20,20)
+                Rando2 = randint(-20,20)
+                Rando3 = randint(-20,20)
+                
+                ProjectileEnt:setPos(Target:boxCenterW()+vec(Rando1,Rando2,Rando3))
+                
+                if(!Target:isAlive()){ break }
+            }
+        }
+        
+        
+        
+    }
+}

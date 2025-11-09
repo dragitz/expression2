@@ -1,0 +1,73 @@
+@name Auto Shield
+
+@persist [Buffer]:array Spam BufferSize Who:entity
+
+Who = findPlayerByName("manners")
+
+BufferSize = 5   # how many health kits you want to store
+                 # bugged, keep it at 5 (spawns ~11)
+
+
+event entityCreated(Entity:entity) {
+    if(Entity:type() == "item_battery" && Entity:owner() == owner())
+    {
+            Entity:propFreeze(1)
+            Entity:propNotSolid(1)
+            
+            Entity:setPos(entity():pos()+vec(0,0,2*Entity:id())) # stack them
+    }
+}
+
+
+event tick()
+{
+    if(Spam > 0){Spam--}
+    
+    # Create health kits
+    if(Buffer:count() < BufferSize & Spam == 0 & findCanQuery())
+    {
+        Spam = 50
+        
+        for(I=1,BufferSize - Buffer:count(),1)
+        {
+            concmd("gm_spawnsent item_battery")
+        }
+        
+        findIncludePlayerProps(owner())
+        findByClass("item_battery")
+        Buffer = findToArray()
+    }
+    
+    
+    # Heal players
+    if(Buffer:count() > 0)
+    {
+        
+        if(perf() & opcounter() < softQuota())
+        {
+            if(Who:isAlive() & Who:armor() < 100)
+            {
+                Kit = Buffer:popEntity()
+                
+                Kit:setPos(Who:pos())
+            }
+        }
+    
+    }
+    
+}
+
+
+event removed(Resetting:number) {
+    reset()
+}
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,12 @@
+@name Anti Fire
+event tick()
+{
+    Players = players()
+    for(I=1,Players:count())
+    {
+        Players[I,entity]:extinguish()
+        
+    }
+}
+
+event removed(Resetting:number) {reset()}

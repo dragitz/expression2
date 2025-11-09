@@ -1,0 +1,62 @@
+@name Anti Holo Blinders
+@persist Holos:array Lookup:table
+
+
+#[
+    Super simple script that detects holos attached to you that are not yours and blocks them
+]#
+
+
+if(first() | duped() | dupefinished())
+{
+    Time = systime()    
+    Holos = array()
+    
+    Lookup = table(
+        "gmod_wire_hologram" = 1
+    )
+    # Check for holos that are already attached to you
+    
+    findByClass("gmod_wire_hologram")
+    const Array = findToArray()
+    for(I=1,Array:count())
+    {
+        Holos:pushEntity(Array[I,entity])
+    }
+}
+
+event entityCreated(Entity:entity) {
+    
+    # Prevent chip crash
+    if(!Lookup[Entity:type(),number]){ exit() }
+    
+    Holos:pushEntity(Entity)
+}
+
+event tick()
+{
+    if(systime() - Time > 0.5)
+    {
+        Time = systime()
+        const Count = Holos:count()
+        
+        for(I=1,Count)
+        {
+            const Holo = Holos[I,entity]
+            const Parent = Holo:parent()
+            
+            if(Holo:owner() == Parent & Parent == owner())
+            {
+                const SteamID = Holo:owner():steamID()
+                const Name = Holo:owner():name()
+                const CMD = "wire_holograms_block_client \""+SteamID+"\" // "+Name
+                
+                concmd(CMD)
+                #print(CMD) #debug cmd
+                
+                print("Blocked potential blinder holo from: "+Name)
+            }
+        }
+        Holos:clear()            
+    }
+}

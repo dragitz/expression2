@@ -1,0 +1,8 @@
+@name RULE Who dies, also explodes
+event playerDeath(Victim:entity, Inflictor:entity, Attacker:entity) {
+    if(Victim == Attacker & Attacker:isPlayer() && Inflictor == Attacker)
+    {
+            X = propSpawn("models/props_phx/cannonball_solid.mdl",Victim:pos(),ang(0,0,0),0)
+            X:propBreak()
+    }
+}

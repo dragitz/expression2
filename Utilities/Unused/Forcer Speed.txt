@@ -1,0 +1,84 @@
+@name Forcer speed
+@outputs Velocity Length
+@persist Forcer:entity Moving Pos:vector Who:entity Noclip
+
+
+if(dupefinished() | duped()){ print("parent: "+Forcer:parent():toString()) }
+
+Who = findPlayerByName("manners")
+if(!Who:isValid()){ Who = owner() }
+
+Forcer = entity():isWeldedTo()
+
+# Check parenting first, then weldedto
+if(Forcer:type() != "gmod_wire_forcer"){Forcer = entity():isWeldedTo(), Forcer:parentTo(entity()) }
+
+entity():propFreeze(1)
+
+if(Forcer:type() != "gmod_wire_forcer" || !Forcer:isValid())
+{
+    print("Please spawn this chip on the forcer")
+    selfDestruct()
+}
+
+
+Velocity = 0
+Length = 0
+Noclip = 0
+
+event keyPressed(Player:entity, Key:string, Down:number, KeyBind:string) {
+    if(Player == owner() & Key == "v" & Down & Player:isAlive() & !Player:inVehicle())
+    {
+        if(Noclip)
+        {
+            Noclip = 0
+            print("Fly OFF")
+        }
+        else
+        {
+            Noclip = 1
+            print("Fly ON")
+        }
+    }
+}
+event tick()
+{
+    CurrentSpeed = Who:vel():length()
+    
+    if(->Velocity & ->Length & CurrentSpeed < 1100 & CurrentSpeed > 320 & Who:keySprint() & Noclip)
+    {
+        
+        
+        Forcer:propNotSolid(1)
+        Forcer:setAlpha(0)
+        entity():propNotSolid(1)
+        entity():setAlpha(0)
+        
+        Length = Forcer:pos():distance(Who:pos()) + 100
+        
+        Pos = Who:pos() - Who:vel():normalized() + vec(0,0,Who:height() / 2) # make it center the body
+        
+        if(Pos:isInWorld())
+        {
+            Forcer:setPos(Pos)
+            
+            # Angle
+            Vec_dir = Pos - Who:pos()-vec(0,0,Who:height() / 2)
+            AimAngle = Vec_dir:toAngle()
+            
+            Pitch = AimAngle:pitch() + 90
+            Yaw = AimAngle:yaw()
+            Roll = AimAngle:roll() + 180
+            
+            Forcer:setAng(ang(Pitch,Yaw,Roll))
+            
+            Velocity = 435
+            #if(owner():velL():z() < -300){Velocity *= -1}
+        }
+        
+         
+    }else{Velocity = 0, Length = 0}
+    
+    if(!Forcer:isValid()){print("invalid forcer")}
+    #Shoot = owner():shootPos() + owner():eye() * 100
+}

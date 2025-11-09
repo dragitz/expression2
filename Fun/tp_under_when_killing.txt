@@ -1,0 +1,38 @@
+@name TP under when killing
+
+@persist [Target CHAIR]:entity
+
+if(first() || dupefinished())
+{
+    Target = noentity()
+    
+    CHAIR = seatSpawn("models/nova/chair_plastic01.mdl", entity():pos()+vec(0,0,30),ang(0,0,0),1)
+    CHAIR:propNotSolid(1)
+    CHAIR:propFreeze(1)
+    CHAIR:setAlpha(0)
+    CHAIR:propShadow(0)
+    CHAIR:setAng(ang(180,0,0))
+}
+
+event playerDeath(Victim:entity, Inflictor:entity, Attacker:entity) {
+    if(Attacker != owner()){ exit() }
+    
+    if(!Victim:isValid() ||  Victim == noentity() || !Victim:isPlayer() || Victim == owner()){ exit() }
+        
+    const Pos = Victim:pos()+vec(0,0,20)
+    
+    Target = Victim 
+        
+    CHAIR:setPos(Pos)
+    CHAIR:use()
+}
+
+event tick()
+{
+    if(Target:isValid() && Target:isPlayer())
+    {
+        CHAIR:setPos(Target:pos()+vec(0,0,20))
+    }
+}
+
+event remote(Sender:entity, Player:entity, Payload:table) {}

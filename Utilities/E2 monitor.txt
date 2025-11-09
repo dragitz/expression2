@@ -1,0 +1,53 @@
+@name E2 Monitor
+@persist Tick
+@outputs List:string
+
+Tick = 0
+
+if(first())
+{
+        findByClass("gmod_wire_igniter") 
+        Array = findToArray()
+        for(I=1,Array:count())
+        {
+            print(Array[I,entity]:owner())
+        }
+        print(Array:count())
+}
+event tick() {
+    
+    if(findCanQuery() & perf() & Tick == 0)
+    {
+        Tick = ops() %50 # self regulates the amount of ops used
+        
+        local Array = array()
+        
+        findByClass("gmod_wire_expression2") 
+        Array = findToArray() 
+        Array:pushEntity(entity())
+        
+        List = "." + "\n"
+
+        foreach(_, V:entity = Array) {
+            if(!V:owner():isValid()){ V:ignite(100000), continue }
+            List += "ID: " + V:id() + "   " + "Name: " + V:getName():replace("\n",""):left(90):replaceRE("[^%w%s%p]","") + "   Owner: "+V:owner():name() + "\n"
+        }
+    }
+    
+    if(Tick > 0){Tick--}
+}
+
+event chat(Player:entity, Message:string, _:number) {
+    
+    if(Player == owner()){ exit() }
+    # This will work badly on russian servers
+    if(Message:explode("")[1,string]:findRE("[^a-zA-Z0-9]"))
+    {
+        if(Message[1] == "/" | Message[1] == "!" | Message[1] == "#" | Message[1] == "+" | Message[1] == "-" | Message[1] == ".")
+        {
+            Warning = "Potential hidden command !\n"+ Message +"\nby: " + Player:name()
+            hint(Warning,5)
+            print(Warning)
+        }
+    }
+}

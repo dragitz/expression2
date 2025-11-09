@@ -1,0 +1,52 @@
+@name Anti Chat Killer
+
+@persist Cube:entity Tick Data:table
+
+
+if(first() | duped())
+{
+    propSpawnUndo(0)
+    
+    Tick = 0
+    
+    Cube = propSpawn("models/hunter/blocks/cube075x075x075.mdl",entity():pos()+vec(0,0,20),1)
+
+    Cube:setMass(10000)
+    if(!Cube:isValid()){ print("E2 didn't spawn cube. Please place this E2 again") }else{ print("E2 properly spawned")}
+    Cube:propDraw(0)
+    Cube:setCollisionGroup(_COLLISION_GROUP_PASSABLE_DOOR)
+    
+    Data = table(
+        "!kill" = 1,
+        "-smite" = 1
+    )
+}
+
+event tick()
+{
+    if(Tick >= 1){ Tick += 1}
+    
+    if(Tick > 5){ Cube:setPos(entity():pos()+vec(0,0,20)), Tick = 0}
+}
+event chat(Player:entity, Message:string, Team:number) {
+    
+    H=Message:explode(" ")
+    
+    if(Data[H[1,string],number])
+    {
+        TT=findPlayerByName(H[2,string])
+        
+        Cube:setPos(TT:pos()+vec(0,0,10))
+        #print(Cube:pos())
+        
+        #concmd("say "+Player:name()+" ran:  !kill  targetting: "+TT:name()+ ". Prop was placed to prevent kill" )
+        hint(Player:name() + " ran "+H[1,string]+" on: " + TT:name(),3.5)
+        print(Player:name() + " ran "+H[1,string]+" on: " + TT:name())
+    }
+    
+    Tick = 1
+}
+
+event removed(_:number) {
+    propDeleteAll()    
+}

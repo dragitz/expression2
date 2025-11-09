@@ -1,0 +1,65 @@
+@name Disco Time !
+@persist Data:table Mine:entity Tick
+@strict
+if(first())
+{
+    Tick = 0
+    Data = table(
+        "combine_mine" = 1,
+        "env_sprite" = 1
+    )
+    
+    Mine = noentity()
+}
+
+
+event tick()
+{
+    if(!owner():isFlashlightOn())
+    {
+        if(Tick){Tick--}
+        if(!Mine:isValid() & !Tick)
+        {
+            concmd("gm_spawnsent combine_mine")
+            Tick = 5
+        }
+    }
+
+}
+
+
+event entityCreated(Entity:entity) {
+        
+    if(!Data[Entity:type(),number]){ exit() }
+    
+    #print(Entity)
+    
+    if(Entity:type() == "env_sprite")
+    {
+        const Sprite = Entity
+        Mine = Entity:getConnectedEntities("")[2,entity]
+        if(!Data[Mine:type(),number]){ Mine = noentity() } # Only delete your mines
+        
+        # Make it not interact with other players
+        Mine:propNotSolid(1)
+        Mine:setAlpha(0)
+        
+        # Teleport
+        const Players = players()
+        Player = Players[random(1,Players:count()+1),entity]
+        #Player = owner() #debug
+        
+        const Distance = 150
+        const Pos = Player:pos() + vec(random(-Distance,Distance),random(-Distance,Distance),random(0,Distance / 2))
+        
+        Mine:setPos(Pos)
+        
+        # Take ownership of sprite and freeze it
+        #Sprite:ignite(0.0001)
+        Sprite:parentTo(entity())
+        
+        # Delete mine
+        Mine:propDelete()
+    }
+}
+

@@ -1,0 +1,114 @@
+@name Signal destroyer
+@persist [Data E2Owners Commands]:table Tick MaxTick TelGroup:string
+@persist ExecuteTick ExecuteTickMax E2_CHIP:entity RanAlready
+if(first() | dupefinished())
+{
+    Tick = 0
+    MaxTick = 200
+    
+    ExecuteTick = 0
+    ExecuteTickMax = 10
+    
+    # to bypass this e2, the original code must not use this specific group
+    TelGroup = "teleportGroup"    
+    
+    dsSetScope(2)
+    dsJoinGroup(TelGroup)
+    
+    Data = table(
+        "D.I.G Teleportation" = 1,
+        "gmod_wire_expression2" = 1
+    )
+    
+    Commands = table(
+        "-tp" = 1,
+        "-p" = 1,
+        "-b" = 1
+    )
+    E2Owners = table()
+    
+    RanAlready = 0
+    function findE2Owners()
+    {
+        if(!findCanQuery()){ exit() }
+        
+        findByClass("gmod_wire_expression2")
+        local Arr = findToArray()
+        foreach(_:number, Entity:entity = Arr)
+        {
+            if(!Data[Entity:getName(),number]){ continue }
+            
+            const Owner = Entity:owner()
+            E2Owners[Owner:steamID64(),entity] = Entity
+            if(!RanAlready)
+            {
+                print(Entity:getName() + "  " + Owner:name())
+            }
+        }
+    }
+    findE2Owners()
+    
+    RanAlready = 1
+}
+
+event chat(Player:entity, Message:string, Team:number) {
+    
+    const CMD = Message:explode(" ")[1,string]
+    if(!Commands[CMD,number]){ exit() }
+    
+    if(!E2Owners[Player:steamID64(),entity]){ exit() }
+    
+    E2_CHIP = E2Owners[Player:steamID64(),entity]
+}
+
+event tick()
+{
+    Tick++
+    if(Tick > MaxTick){ Tick = 0 }
+    if(!Tick)
+    {
+        # fully reset table, no need to check if entity is valid or not
+        E2Owners = table()
+        findE2Owners()
+    }
+    
+    if(E2_CHIP:isValid())
+    {
+        ExecuteTick++
+        if(ExecuteTick < ExecuteTickMax)
+        {
+            dsSendDirect(TelGroup,E2_CHIP,1)
+        }else
+        {
+            ExecuteTick = 0
+            E2_CHIP = noentity()
+        }
+    
+    }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

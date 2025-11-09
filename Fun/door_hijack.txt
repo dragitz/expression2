@@ -1,0 +1,68 @@
+@name Door Hijack
+@persist Chair:entity NewPositionVector:vector TargetPos:vector
+
+Chair = entity():isWeldedTo()
+Chair:propFreeze(1)
+Chair:setAlpha(0)
+Chair:setCollisionGroup(_COLLISION_GROUP_PASSABLE_DOOR)
+entity():propFreeze(1)
+entity():propNotSolid(1)
+entity():setAlpha(0)
+
+switch(map())
+{
+    case "gm_bigcity",
+    case "gm_bigcity_improved",
+        TargetPos = vec(2166.643799,1447.728882,-9050.968750)
+    break,
+    
+    default,
+        print("Map not defined."),Chair:propBreak(),selfDestructAll()
+    break
+}
+
+# Script does not check for vehicle type, be smart enough to spawn it correctly
+if(!Chair:isValid() | !Chair:isVehicle()){ print("Spawn this chip on a pod"), selfDestructAll()}
+
+event tick()
+{
+    
+    if(owner():aimEntity():type() == "func_button")
+    {        
+        InitialVector = owner():pos()+vec(0,0,owner():height())
+        DestinationVector = owner():aimPos()+vec(0,0,30)
+        
+        DirectionVector = DestinationVector - InitialVector
+        Magnitude = sqrt(DirectionVector:x()^2 + DirectionVector:y()^2 + DirectionVector:z()^2)
+        NormalizedDirectionVector = DirectionVector / Magnitude
+        
+        BackwardVector = NormalizedDirectionVector * 1
+        
+        NewPositionVector = DestinationVector - BackwardVector
+        
+    }
+    
+    if(NewPositionVector:isInWorld() & NewPositionVector != vec(0,0,0) & !owner():inVehicle())
+    {
+        Chair:propNotSolid(0)
+        Chair:setAng(owner():angles()+ang(180,0,0))
+        Chair:setPos(NewPositionVector)
+    }else
+    {
+        Chair:propNotSolid(1)
+    }
+    
+    if(Chair:driver() == owner())
+    {
+        Chair:setPos(TargetPos)
+        
+        while(perf())
+        {
+            if(owner():pos():distance(TargetPos) < 20)
+            {
+                Chair:ejectPod()
+                break
+            }
+        }
+    }
+}

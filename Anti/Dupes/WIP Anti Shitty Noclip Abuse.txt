@@ -1,0 +1,38 @@
+@name Anti Shitty Noclip Abuse
+@persist Table:table Prop:entity LastEntityCheck:entity
+
+if(first())
+{
+    Table = table(
+        "prop_physics" = 1,
+        "models/props_c17/oildrum001_explosive.mdl" = 1
+    )
+    
+    Prop = propSpawn("models/hunter/blocks/cube05x05x05.mdl",entity():pos()+vec(0,0,10),1)
+    
+    entity():setName("Rotate prop")
+}
+event entityCreated(Entity:entity) {
+    
+    if(!Table[Entity:type(),number]){ exit() }
+    if(!Table[Entity:model(),number]){ exit() }
+    
+    LastEntityCheck = Entity
+    
+    Location = Entity:pos() + Entity:vel()  * (100 / 1000)
+    Prop:setPos(Location)
+}
+
+event tick()
+{
+    
+    if(!LastEntityCheck:isValid())
+    {
+        Prop:setPos(entity():pos()+vec(0,0,60))
+    }else
+    {
+        Location = LastEntityCheck:pos() + LastEntityCheck:vel()  * (10 / 1000)
+        Prop:setPos(Location)
+    }
+}
+

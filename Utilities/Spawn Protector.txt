@@ -1,0 +1,133 @@
+@name Spawn protector
+@persist Map:table Done Index Max
+
+if(first())
+{   
+    print(map() + "    ", entity():pos()) 
+    Index = 1
+    
+    Done = 0
+    Map = table(
+    
+        "gm_construct" = table(
+            vec(850.572,632.175,-125),
+            vec(850.572,252.575,-125),
+            vec(850.572,-127.025,-125),
+            vec(850.572,-506.625,-125),
+            vec(850.572,-886.225,-125)
+        ),
+        "gm_construct_minecraft" = table(
+           vec(2852.69,4525.1,1000.28)
+        ),
+        
+        "gm_bigcity" = table(
+            vec(1120,-3904,-11109),
+            vec(-1661.1,-2885.34,-11109),
+            vec(-3200,-704,-11109),
+            vec(1728,-1808,-11109),
+            vec(-864,1344,-11109),
+            vec(960,-400,-11109),
+            vec(-1664,-3184,-11109),
+            vec(-1520,-2256,-11109),
+            vec(288,1360,-11109),
+            vec(-2192,-1520,-11109),
+            vec(1728,-2640,-11109),
+            vec(-3200,336,-11109),
+            vec(-2704,1360,-11109),
+            vec(-2112,1344,-11109),
+            vec(-608,-4032,-11109),
+            vec(256,-3904,-11109)
+        ),
+        "gm_neon_bigcity" = table(
+            vec(1120,-3904,-11109),
+            vec(-1661.1,-2885.34,-11109),
+            vec(-3200,-704,-11109),
+            vec(1728,-1808,-11109),
+            vec(-864,1344,-11109),
+            vec(960,-400,-11109),
+            vec(-1664,-3184,-11109),
+            vec(-1520,-2256,-11109),
+            vec(288,1360,-11109),
+            vec(-2192,-1520,-11109),
+            vec(1728,-2640,-11109),
+            vec(-3200,336,-11109),
+            vec(-2704,1360,-11109),
+            vec(-2112,1344,-11109),
+            vec(-608,-4032,-11109),
+            vec(256,-3904,-11109)
+        ),
+
+        "gm_bigcity_improved" = table(
+            vec(1120,-3904,-11109),
+            vec(-1661.1,-2885.34,-11109),
+            vec(-3200,-704,-11109),
+            vec(1728,-1808,-11109),
+            vec(-864,1344,-11109),
+            vec(960,-400,-11109),
+            vec(-1664,-3184,-11109),
+            vec(-1520,-2256,-11109),
+            vec(288,1360,-11109),
+            vec(-2192,-1520,-11109),
+            vec(1728,-2640,-11109),
+            vec(-3200,336,-11109),
+            vec(-2704,1360,-11109),
+            vec(-2112,1344,-11109),
+            vec(-608,-4032,-11109),
+            vec(256,-3904,-11109)
+        ),
+        "rp_cscdesert_v2-1" = table(
+            vec(1015,1000,30)
+        ),
+        "gm_freespace_13" = table(
+            vec(-3070,13,-14560)
+        ),
+        "gm_genesis" = table(
+            vec(1535.54,-10028.7,-8831.72)
+        )
+        
+        	
+    
+    )
+    
+    Max = Map[map(),table]:count()
+}
+
+event tick()
+{
+    if(!Done & propCanCreate())
+    {
+        Coords = Map[map(),table][Index,vector]
+        #Angles = ang(0,180,0)
+        
+        
+        Cube = propSpawn("models/hunter/blocks/cube8x8x8.mdl",Coords-vec(0,0,10),ang(0,0,0),1)
+        #Cube = propSpawn("models/hunter/blocks/cube4x4x4.mdl",Coords-vec(0,0,10),ang(0,0,0),1)
+        #Cube = propSpawn("models/hunter/blocks/cube1x2x1.mdl",Coords+vec(0,0,40),ang(0,0,-90),1)
+        
+        if(Cube:isValid())
+        { 
+            Cube:setMass(_INF)
+            Cube:setAlpha(150)
+            Cube:propShadow(0)
+            Cube:setMaterial("phoenix_storms/stripes")
+            Cube:setColor(vec(0,255,0))
+            Cube:propDraw(0)
+            #Cube:setCollisionGroup(_COLLISION_GROUP_DOOR_BLOCKER)
+            Cube:setCollisionGroup(_COLLISION_GROUP_PASSABLE_DOOR)
+            
+            
+            Index++
+        }
+        
+        if(Index > Max){ print("Done spawning"), Done = 1, selfDestruct()}
+    }
+    
+}
+
+
+
+
+
+
+
+

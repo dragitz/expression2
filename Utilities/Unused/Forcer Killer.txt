@@ -1,0 +1,64 @@
+@name k
+
+@outputs Velocity
+@persist [Forcer Target Prop]:entity
+
+
+Target = findPlayerByName("manners")
+
+Forcer = entity():isWeldedTo()
+if(Forcer:type() != "gmod_wire_forcer")
+{
+    print("Please spawn this chip on the forcer")
+    selfDestruct()
+}
+Forcer:propFreeze(1)
+Forcer:setAng(ang(0,0,0))
+
+if(!Target:isValid()){print("Target is invalid"), selfDestruct()}
+
+Prop = propSpawn("models/hunter/blocks/cube025x025x025.mdl",entity():pos()+vec(0,0,100),1)
+Prop:setAlpha(0)
+
+
+event removed(Resetting:number) {
+    print("Forcer kill: removed both e2, prop and forcer")
+    Forcer:propDelete()
+    Prop:propDelete()
+}
+
+entity():propFreeze(1)
+
+event tick()
+{
+    if(->Velocity){
+        
+        entity():propNotSolid(1)
+        entity():setAlpha(0)
+        Forcer:propNotSolid(1)
+        Forcer:setAlpha(0)
+        
+        
+        if(Target:isAlive() & !Target:inVehicle())
+        {
+            Prop:propNotSolid(0)
+            
+            Pos = Target:pos()+vec(0,0,Target:height()/2)
+            
+            # Ensure pos in in this world, or it might break
+            if(Pos:isInWorld())
+            {
+                Forcer:setPos(Pos)
+                Prop:setPos(Target:pos()+vec(0,0,Target:height()+10))
+                if(Target:isOnGround()){Velocity = inf()}else{Velocity = -inf()}
+                #Velocity = inf()
+            }
+        }else
+        {
+            Prop:propNotSolid(1)
+            
+            Velocity = 0
+        }
+    }
+    
+}

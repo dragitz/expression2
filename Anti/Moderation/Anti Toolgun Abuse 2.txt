@@ -1,0 +1,96 @@
+@name Anti Toolgun Abuse 2
+@persist [Players Data People]:table CHAIR:entity Cooldown Delay
+
+
+if(first() | dupefinished())
+{
+    CHAIR = propSpawn("models/hunter/blocks/cube025x025x025.mdl",1)
+    CHAIR:setAlpha(0)
+    CHAIR:setCollisionGroup(_COLLISION_GROUP_PASSABLE_DOOR)
+    CHAIR:propDraw(0)
+    
+    Players = table()
+    
+    People = table(
+        "STEAM_0:0:580337282" = 1, # dude spawnkiller
+        "STEAM_0:1:803226717" = 1,  #  russian crasher
+        "STEAM_0:0:559346682" = 1,  # RockyFox crashing servers with dupes
+        "STEAM_0:1:763305296" = 1,  # RockyFox crashing servers with dupes "Csgonovice"       
+        "STEAM_0:1:642246386" = 1,   # edev759 spawning dupe containing 16 entities and 28 constraints
+        "STEAM_0:1:919914806" = 1 #heinze576 spawning dupe containing 72 entities and 108 constraints (explosives at spawn)
+
+
+    )
+
+    Data = table(
+        "gmod_tool" = 1,
+        "duplicator" = 1,
+        "attack" = 1
+    )
+    
+    Delay = 1.5
+    
+    #entity():setName("Anti Toolgun Spam (Delay: "+Delay+"s)")
+}
+event keyPressed(Player:entity, Key:string, Down:number, KeyBind:string) {
+    
+    # Ensure it's a dupe spawn
+
+    if(!Data[KeyBind,number]){ exit() }
+    #if(!Data[Player:tool(),number]){ exit() }
+    if(!Data[Player:weapon():type(),number]){ exit() }
+    
+    # Extra checks
+    if(!Down){ exit() }
+    if(Player == owner()){ exit() }
+    
+    # Forced blacklist
+    if(People[Player:steamID(),number])
+    {
+        Forward = Player:shootPos()+Player:eye()* 70
+        CHAIR:setPos(Forward)
+    
+        Pitch = Player:eyeAngles():pitch() + 90
+        Yaw = Player:eyeAngles():yaw()
+        Roll = Player:eyeAngles():roll()
+        CHAIR:setAng(ang(Pitch,Yaw,Roll))
+        
+        Cooldown = 3
+        print(Player:name() + " tried to use dupe tool")
+        exit()        
+    }
+    
+    # Check if the player is in cooldown
+    if(!Players[Player:steamID(),number])
+    {
+        Players[Player:steamID(),number] = systime() + Delay
+        exit()
+    }
+    
+    if(systime() < Players[Player:steamID(),number])
+    {
+        Me = Player
+        Forward = Me:shootPos()+Me:eye()* 70
+        CHAIR:setPos(Forward)
+    
+        Pitch = Me:eyeAngles():pitch() + 90
+        Yaw = Me:eyeAngles():yaw()
+        Roll = Me:eyeAngles():roll()
+        CHAIR:setAng(ang(Pitch,Yaw,Roll))
+        
+        Cooldown = 3
+        exit()
+        
+    }
+    Players[Player:steamID(),number] = systime() + Delay
+}
+event tick()
+{
+    if(Cooldown){ Cooldown -= 1}
+    if(Cooldown == 1)
+    {
+        CHAIR:setPos(entity():pos())
+    }
+}
+
+event removed(Resetting:number) {reset()}

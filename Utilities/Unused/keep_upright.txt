@@ -1,0 +1,9 @@
+@name Keep upright
+@persist Angle:angle
+
+Angle = entity():isWeldedTo():angles()
+print(Angle)
+event tick()
+{
+    entity():isWeldedTo():setAng(Angle)
+}

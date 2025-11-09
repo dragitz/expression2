@@ -1,0 +1,61 @@
+@name Anti M9K abuse
+
+@persist Obj:entity Wait
+
+##include "idiot"
+##include "lib/protector"
+
+if(first() | dupefinished()){
+    Obj = propSpawn("models/hunter/blocks/cube075x075x075.mdl",entity():pos(),1)
+    Obj:propFreeze(1)
+    Obj:setAlpha(0)
+    
+    if(!Obj:isValid()){ print("Cube is invalid! Respawn the chip")}
+}
+event tick()
+{
+    if(Wait > 0){Wait--}
+    
+    if(findCanQuery() & perf() & Wait < 1)
+    {
+        # Really minge things
+        findIncludeClass("m9k_nervegasnade")
+        findIncludeClass("m9k_thrown_nitrox")
+        
+        # Less minge things
+        findIncludeClass("m9k_m202_rocket")
+        #findIncludeClass("m9k_gdcwa_rpg_heat")
+        #findIncludeClass("m9k_milkor_nade")
+        
+        # Least minge thing
+        #findIncludeClass("prop_combine_ball")
+        
+        
+        
+        findInSphere(entity():pos(),10000000)
+        
+        Target = findClosest(entity():pos())
+        #print(Target:isWeapon())
+        
+        
+        if(Target:isValid())
+        {
+            Wait = 10
+            Obj:propNotSolid(0)
+        
+        
+            Pos = Target:pos() + Target:vel()  * (50 / 1000)
+            
+            if(Pos:isInWorld())
+            {
+                Obj:setPos(Pos)
+            }
+            
+        }else
+        {
+            Obj:propNotSolid(1)
+        }
+        
+    }
+}
+event removed(Resetting:number) {print("Removed!"),reset()}

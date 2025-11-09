@@ -1,0 +1,68 @@
+@name It's all superflat
+@persist Me:entity InChair CHAIR:entity Sky:vector
+
+
+
+Me = owner()
+
+event tick()
+{
+    DD = owner():aimPos():distance(owner():pos()+vec(0,0,owner():height()/1.1))
+    
+    # Find sky
+    if(Sky == vec(0,0,0))
+    {
+        SkyR=rangerOffset(owner():pos()+vec(0,0,100),owner():pos()+vec(0,0,1000000))
+        if(SkyR:hitSky()){Sky = SkyR:pos()-vec(0,0,50)}        
+    }
+    
+    if(Me:isAlive() & Sky != vec(0,0,0))
+    {
+        if(DD < 25 & !InChair)
+        {
+            
+            # Find a spot
+            Distance = 50
+            Forward = Me:shootPos()+Me:eye()*Distance
+            
+            
+            
+            A = Forward:x()
+            B = Forward:y()
+            C = Sky:z()
+            
+            ForwardSky = vec(A,B,C)
+            
+            
+            # Find terrain
+            Terrain = rangerOffset(ForwardSky,ForwardSky-vec(0,0,1000000))
+            
+            TDIst = Terrain:pos():distance(owner():pos())
+            
+            # Original: TDIst > 50
+            if(Terrain:pos():isInWorld() & TDIst > 20 & Terrain:pos():z() > owner():pos():z())
+            {
+                CHAIR = seatSpawn("models/nova/chair_plastic01.mdl", Terrain:pos()+vec(0,0,50),owner():angles()+ang(0,0,90),1)
+                CHAIR:use()
+                
+                InChair = 1
+            }
+        
+            
+      
+        }
+        
+        if(InChair & CHAIR:driver() == owner())
+        {
+            InChair = 0
+            
+            #CHAIR:ejectPod()
+            CHAIR:propDelete()        
+            
+        }
+    }
+}
+
+event removed(P:number) {
+    if(P != 1){reset()}
+}

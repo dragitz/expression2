@@ -1,0 +1,79 @@
+@name bruh moment
+@persist [Obj Who]:entity Steam:string Player:string
+
+
+# type "status" in console to get the steam id
+Who = findPlayerBySteamID("STEAM_0:1:105646017")
+# STEAM_0:1:105646017
+
+Player = "torun"
+
+if(!Who:isValid())
+{
+    Who = findPlayerByName(Player)
+}
+
+
+if(Who:isPlayer() & Who:isValid())
+{
+    Steam = Who:steamID()
+}else{ Steam = ""}
+
+print(Who:name())
+print(Steam)
+
+
+#Obj = propSpawn("models/hunter/blocks/cube1x1x1.mdl",entity():pos(),1)
+Obj = entity():isWeldedTo()
+
+Obj:propFreeze(1)
+Obj:setAlpha(0)
+Obj:propShadow(0)
+Obj:propDraw(0)
+
+entity():propFreeze(1)
+entity():propNotSolid(1)
+
+event tick()
+{
+    if(Obj:isValid())
+    {
+        if(!Who:isValid() & findCanQuery())
+        {
+            if(Steam != "")
+            {
+                Who = findPlayerBySteamID(Steam)
+            }else
+            {
+                Who = findPlayerByName(Player)
+            }
+            
+            Obj:propNotSolid(1)
+            
+        }else
+        {
+                Steam = Who:steamID()
+                
+                Forward = Who:shootPos()+Who:eye()*1
+                if(Forward:isInWorld())
+                {
+                    Obj:propNotSolid(0)
+                    Obj:setPos(Forward)
+                }
+        }
+    }else
+    {
+        if(propCanCreate())
+        {
+            Obj = propSpawn("models/hunter/blocks/cube025x025x025.mdl",entity():pos()+vec(0,0,10),1)
+        }
+    }
+}
+
+event removed(_:number)
+{
+    propDeleteAll()
+    reset()
+}
+#
+

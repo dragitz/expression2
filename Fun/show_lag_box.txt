@@ -1,0 +1,79 @@
+@name Show lag boxes
+@persist Pos:vector Me:entity Predicted_position:vector
+
+if(first())
+{
+    runOnTick(1)
+    
+    holoCreate(1)
+    holoColor(1,vec(0,255,0))
+    holoScale(1,vec(1,1,1))
+    holoAlpha(1,180)
+
+    holoCreate(2)
+    holoColor(2,vec(255,0,0))
+    holoScale(2,vec(1,1,1))
+    holoAlpha(2,180)
+
+    holoCreate(3)
+    holoColor(3,vec(0,0,220))
+    holoScale(3,vec(1,1,1))
+    holoAlpha(3,180)
+    
+    holoCreate(4)
+    holoColor(4,vec(220,0,220))
+    holoScale(4,vec(1,1,1))
+    holoAlpha(4,180)
+
+        
+    timer("timer",owner():ping())
+    
+    Pos = vec(0,0,0)
+    Me = owner()
+}
+
+
+Table = owner():eyeTraceCursor():pos()
+Predicted_position = Table + owner():vel() * (owner():ping() / 500)
+
+
+
+
+holoPos(1,Table)
+holoPos(2,Pos)
+holoPos(3,Predicted_position)
+holoPos(4,Predicted_position+ owner():vel() * (owner():ping() / (owner():ping() * 2)) / 1.8 )
+
+if(clkName() == "timer")
+{
+    Pos = owner():eyeTraceCursor():pos()
+    
+    timer("timer",owner():ping())
+}
+
+if(Table:distance(Pos) < 5 && Me:weapon():type() != "gmod_tool" && Me:weapon():type() != "weapon_physgun")
+{
+    
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

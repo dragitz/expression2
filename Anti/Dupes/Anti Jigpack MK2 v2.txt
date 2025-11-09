@@ -1,0 +1,123 @@
+@name Anti JigPack MK2 v2
+@persist Prop:entity [Data Players]:table
+if(first() | duped())
+{
+    propSpawnUndo(0)
+    
+    # init stuff
+    Data = table(
+        "gmod_wire_expression2" = 1,
+        "models/maxofs2d/balloon_classic.mdl" = 1,
+        "JigPack MK2!" = 1,
+        "attack2" = 1
+    
+    )
+    
+    Players = table()
+    
+    Prop = propSpawn("models/hunter/plates/plate1x1.mdl",entity():pos()+vec(0,0,30),ang(0,0,0),1)
+    if(!Prop:isValid())
+    {
+        # try again
+        Prop = propSpawn("models/hunter/plates/plate1x1.mdl",entity():pos()+vec(0,0,30),ang(0,0,0),1)
+        if(!Prop:isValid())
+        {
+            print("Initial setup failed. Solution: Spawn the chip again")
+            selfDestructAll()
+        }
+    }
+    
+    
+    # Let only players go through
+    Prop:setCollisionGroup(_COLLISION_GROUP_PASSABLE_DOOR)
+    Prop:propDraw(0)
+    
+    function number findJig(Player:entity)
+    {
+        # Scan for E2
+        findIncludePlayerProps(Player)
+        findByClass("gmod_wire_expression2")
+        local Array = findToArray()
+        for(I=1,Array:count())
+        {
+            if(Array[I,entity]:getName():lower() == "jigpack mk2!")
+            {
+                #print("Found: "+Array[I,entity]:owner():name())
+                Players[owner():steamID64(),number] = 1
+                return 1
+            }
+        }
+        
+        Players[owner():steamID64(),number] = 0
+        return 0
+    }
+    
+    local P = players()
+    for(I=1,P:count())
+    {
+        findJig(P[I,entity])
+        
+        # Check if that player is in one
+        if(P[I,entity]:inVehicle() & Data[P[I,entity]:vehicle():model(),number])
+        {
+            Players[P[I,entity]:steamID64(),number] = 1
+        }
+    }
+    
+}
+
+# Keep track of spawned E2
+event entityCreated(Entity:entity) {
+    if(!Data[Entity:type(),number]){ exit() }    # Expression2 chip
+    if(!Data[Entity:getName(),number]){ exit() } # Expression2 name
+}
+event playerEnteredVehicle(Player:entity, Vehicle:entity) {
+    
+    # Model must match
+    if(!Data[Vehicle:model(),number]){ exit() }
+    
+    # find chip if necessary
+    if(!Players[Player:steamID64(),number])
+    {
+        findJig(Player)
+    }
+}
+
+event playerLeftVehicle(Player:entity, Vehicle:entity) {
+    
+    # Only set it to 0 if 1
+    if(Players[Player:steamID64(),number])
+    {
+        Players[Player:steamID64(),number] = 0
+    }
+}
+
+event keyPressed(Player:entity, Key:string, Down:number, KeyBind:string) {
+    
+    if(!Down){ exit() }
+    if(!Data[KeyBind,number]){ exit() }
+    
+    # Player must be driving a specific model
+    if(!Player:inVehicle()){ exit() }
+    if(!Data[Player:vehicle():model(),number]){ exit() }
+    
+    # if the player isn't in the list, we need to check if it has the jig e2 spawned
+    if(!Players[Player:steamID64(),number])
+    {
+        if(!findJig(Player)){ exit() }
+    }
+    
+    # at this point we are pretty sure player is shooting with jig
+    
+    # still, allow shooting if the explosive isn't withing reach of a killable player
+    # but too lazy to calculate that
+    const AimPos = Player:aimPos()
+    
+    const Forward = Player:shootPos() + Player:eye() * 50
+    const Pitch = Player:eyeAngles():pitch() + 90
+    const Yaw = Player:eyeAngles():yaw()
+    const Roll = Player:eyeAngles():roll()
+    Prop:setAng(ang(Pitch,Yaw,Roll))
+    
+    Prop:setPos(Forward)
+}

@@ -1,0 +1,106 @@
+@name Anti WallHucks
+@persist Lookup:table MyEGP:entity
+@inputs EGP:wirelink IDS:array Net
+
+# Anti WH
+
+if(first() | dupefinished())
+{
+    entity():propFreeze(1)
+    
+    MyEGP = entity():isWeldedTo()
+    
+    MyEGP:propFreeze(1)
+    MyEGP:setAlpha(0)
+    MyEGP:setCollisionGroup(_COLLISION_GROUP_PASSABLE_DOOR)
+    
+    EGP:egpClear()
+    #EGP:egpBox(1,vec2(100,100),vec2(9000,9000))
+    EGP:egpColor(1,vec(0,0,0))
+    
+    EGP:egpText(2,"bro tried to use dupe wallhacks from the workshop",vec2(500,500))
+    EGP:egpColor(2,vec(255,0,0))
+    EGP:egpSize(2,50)
+    Lookup = table(
+        
+        # Entity type
+        "gmod_wire_expression2" = 1,
+        
+        # Names
+        "Wallhacks" = 1,
+        "WH2" = 1,
+        "[Kabrit_Zuck] > ESP / WallHack" = 1,
+        "[Dot] > ESP / WallHack" = 1,
+        "Wh" = 1,
+        "Target HUD" = 1,
+        "Wallhack" = 1,
+        ".-. u found me" = 1,
+        "[Lordduck] Wallhack" = 1
+    ) 
+}
+event entityCreated(Entity:entity) {
+    print(Entity)
+    # Avoid chip crash
+    if(!Lookup[Entity:type(),number]){ exit() }
+    
+    # store dupe info
+    const Dupe = Entity:getConnectedEntities()
+    const Name = Entity:getName()
+    
+    # Must be one that is known
+    if(!Lookup[Name,number]){ exit()} #print("Unknown E2: ",Name)
+    
+    # check if dupe has gmod_wire_egp_hud connected to it
+    local EGPt = noentity()
+    for(I=1,50)
+    {
+        if(Dupe[I,entity]:type() == "gmod_wire_egp_hud")
+        {
+            EGPt = Dupe[I,entity]
+            break
+        }
+    }
+    
+    if(!EGPt:isValid()){ print("Dupe does not contain valid gmod_wire_egp_hud"), exit()}
+    
+    IDS[EGPt:id()] = 1
+    print("E2 Name: ",Name)
+}
+
+event egpHudConnect(Screen:wirelink, Player:entity, Connected:number) {
+    print(Player:name() + " tried to use the wallhack",Connected)
+    Net = 1
+}
+
+event keyPressed(Player:entity, Key:string, Down:number, KeyBind:string) {
+    if(KeyBind == "use" & Down)
+    {
+        const Ent  = Player:aimEntity()
+        if(Ent:type() != "gmod_wire_egp_hud"){ exit() }
+        
+        const ID = Ent:id()
+        if(!IDS:exists(ID)){ exit() }
+        
+        local Pos = Ent:pos()+Ent:up()/5
+        MyEGP:setPos(Pos)
+        MyEGP:setAng(Ent:angles())
+    }
+}
+
+event tick()
+{
+    if(Net)
+    {
+        MyEGP:setPos(entity():pos()+vec(0,0,10))
+        Net = 0
+    }
+}
+
+
+
+
+
+
+
+
+

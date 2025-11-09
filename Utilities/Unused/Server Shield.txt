@@ -1,0 +1,87 @@
+@name Shield server
+
+@persist [Buffer Players]:array Spam BufferSize
+
+
+BufferSize = 15   # how many health kits you want to store
+                 # bugged, keep it at 5 (spawns ~11)
+
+Players = players()
+
+event playerConnected(_:entity) {
+    Players = players()
+}
+event playerDisconnected(_:entity) {
+    Players = players()
+}
+event entityCreated(Entity:entity) {
+    if(Entity:type() == "item_battery" && Entity:owner() == owner())
+    {
+            Entity:propFreeze(1)
+            Entity:propNotSolid(1)
+            
+            Entity:setPos(entity():pos()+vec(0,0,10*Buffer:count())) # stack them
+    }
+}
+event tick()
+{
+    if(perf() & opcounter() < softQuota() / 2)
+    {
+        if(Spam > 0){Spam--}
+        
+        # Create health kits
+        if(Buffer:count() < BufferSize & Spam == 0 & findCanQuery())
+        {
+            Spam = 50
+            
+            local CMD = "gm_spawnsent item_battery"
+            for(I=1,(BufferSize - Buffer:count()) / 2,1)
+            {
+                CMD = CMD + ";gm_spawnsent item_battery"
+            }
+            
+            concmd(CMD)
+            
+            findIncludePlayerProps(owner())
+            findByClass("item_battery")
+            Buffer = findToArray()
+            
+        }
+        
+        
+        # Heal players
+        if(Buffer:count() > 0)
+        {
+            for(I=1,Players:count())
+            {
+                if(perf() & opcounter() < softQuota() / 2)
+                {
+                    if(Players[I,entity]:isAlive() & Players[I,entity]:armor() < 80 & Players[I,entity]:health() == 100 & Players[I,entity]:weapon():clip1() < 1)
+                    {
+                        Kit = Buffer:popEntity()
+                        
+                        Kit:setPos(Players[I,entity]:pos())
+                    }
+                }
+            }
+        }
+    }
+}
+
+
+event removed(Resetting:number) {
+    reset()
+}
+
+
+
+
+
+
+
+
+
+
+
+
+

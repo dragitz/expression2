@@ -1,0 +1,67 @@
+@name Spin me boy
+@persist [CHAIR Target]:entity
+@persist ANG SPEED
+
+if ( first() ) {
+    propSpawnUndo(0)
+    CHAIR = seatSpawn(
+        "models/nova/chair_plastic01.mdl",
+        entity():pos() + vec(0,0,30),
+        ang(0,0,0),
+        1
+    )
+    CHAIR:propFreeze(1)
+    
+    ANG = random(0,360)
+    SPEED = 700
+    
+    Target = entity()
+    
+    function rotate_around_entity(Entity:entity, DIST:number, YAW:number)
+    {
+        const EX = Entity:pos():x()
+        const EY = Entity:pos():y()
+        const EZ = Entity:pos():z() + 50
+    
+        local RAD = toRad(YAW)
+        local X   = EX + cos(RAD) * DIST
+        local Y   = EY + sin(RAD) * DIST
+        local Z   = EZ
+    
+        return array(X, Y, Z)
+    }
+    
+    
+}
+
+
+event chat(Player:entity, Message:string, Team:number) {
+    if(Player != owner()){ exit() }
+    H=Message:explode(" ")
+
+    if(H[1,string]=="!spin") {
+        hideChat(1)
+        
+        Target = findPlayerByName(H[2,string])
+        
+        CHAIR:use()
+        print(Target)
+    }
+}
+event tick()
+{
+
+    if ( CHAIR:driver():isValid() & Target:isValid()) {
+        ANG = ANG + SPEED
+        const Arr = rotate_around_entity( Target, 200, ANG )
+        CHAIR:setPos( vec(
+            Arr[1,number],
+            Arr[2,number],
+            Arr[3,number]
+        ))
+        
+        #CHAIR:setAng(CHAIR:angles()+ang(0,10,0))
+    }
+    
+    
+}

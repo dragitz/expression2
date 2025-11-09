@@ -1,0 +1,38 @@
+@name Instant TP
+@strict
+
+CHAIR = seatSpawn("models/nova/chair_plastic01.mdl", entity():pos()+vec(10,0,0),ang(0,0,0),1)
+
+event tick()
+{
+    while(1 && perf(10))
+    {
+        
+        if(CHAIR:isValid())
+        {
+            CHAIR:use()
+            if(CHAIR:driver():isValid())
+            {
+                CHAIR:ejectPod()
+                CHAIR:propDelete()
+                break
+            }
+        }
+        else{
+            
+            CHAIR = seatSpawn("models/nova/chair_plastic01.mdl", entity():pos()+vec(10,0,0),ang(0,0,0),1)
+            
+            CHAIR:propFreeze(1)
+            CHAIR:setAlpha(0)
+            CHAIR:propNotSolid(1)
+            
+            CHAIR:use()
+        }
+    }
+    
+
+    while(perf() & CHAIR:isValid() & !CHAIR:driver():isValid())
+    {
+        selfDestruct()
+    }
+}

@@ -1,0 +1,88 @@
+@name Heal server
+
+@persist [Buffer Players]:array Spam BufferSize
+
+
+
+BufferSize = 20   # how many health kits you want to store
+                 # bugged, keep it at 5 (spawns ~11)
+
+Players = players()
+event playerConnected(_:entity) {
+    Players = players()
+}
+event playerDisconnected(_:entity) {
+    Players = players()
+}
+event entityCreated(Entity:entity) {
+    
+    if(Entity:type() == "item_healthkit" && Entity:owner() == owner() && perf() & opcounter() < softQuota() / 2)
+    {
+            Entity:propFreeze(1)
+            Entity:propNotSolid(1)
+            
+            Entity:setPos(entity():pos()+vec(0,0,2*Entity:id())) # stack them
+    }
+}
+
+
+event tick()
+{
+    if(perf() & opcounter() < softQuota() / 2)
+    {
+        if(Spam > 0){Spam--}
+        
+        # Create health kits
+        if(Buffer:count() < BufferSize & Spam == 0 & findCanQuery())
+        {
+            Spam = 50
+            
+            for(I=1,(BufferSize - Buffer:count()) / 2,1)
+            {
+                if(perf() & opcounter() < softQuota() / 2)
+                {
+                    concmd("gm_spawnsent item_healthkit")
+                }
+            }
+            
+            findIncludePlayerProps(owner())
+            findByClass("item_healthkit")
+            Buffer = findToArray()
+        }
+        
+        
+        # Heal players
+        if(Buffer:count() > 0)
+        {
+            for(I=1,Players:count())
+            {
+                if(perf() & opcounter() < softQuota() / 2)
+                {
+                    #if(Players[I,entity]:isAlive() & Players[I,entity]:health() < Players[I,entity]:maxHealth())
+                    if(Players[I,entity]:isAlive() & Players[I,entity]:health() < 80)
+                    {
+                        Kit = Buffer:popEntity()
+                        
+                        Kit:setPos(Players[I,entity]:pos())
+                    }
+                }
+            }
+        }
+    }
+    
+}
+
+
+event removed(Resetting:number) {
+    reset()
+}
+
+
+
+
+
+
+
+
+
+

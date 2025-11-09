@@ -1,0 +1,794 @@
+@name Respawn
+@persist [LastDeathCoords HOME Sky]:vector People:array [Killer Perma CHAIR]:entity
+@persist ID WaitChairTP [Voids EERooms]:table VoidRespawn JailerRespawn
+@persist DelayAfterTP DELAY LastDeaths:array
+@persist Jailer:entity NoVoids
+@persist Reverse ReversedPlayer:entity
+
+@outputs Debug:string
+
+@persist ReverseHeight
+#@strict
+#@autoupdate
+
+
+
+#[
+    
+    C O M M A N D S
+    
+    * Set a home point and go to it *
+    !home
+    !sethome
+    
+    * Teleport to a player *
+    !tp <playername>
+    !teleport <playername>
+    
+    Note: use !reverse <playername> instead of !tp jailer (more accurate)
+    !tp jailer <-- Will briefly teleport to the jailer, then go to a safe spot. Will use the jail against the jailer
+    
+    * Teleport yourself in the safest possible spot
+    !void
+        
+    * Stuck underground? Go to the surface *
+    !surface
+    !up
+
+    * If you are getting spawnkilled, type the name of the player and use its prop against him
+    * Note:  Type !reverse without specifying any parameter to toggle off the reverse
+    !reverse <PlayerName>
+    !reverse
+        
+    * Teleport yourself to the E2 chip *
+    !chip
+    
+    * Teleport the chip at your position *
+    !chiphere
+    
+    * Teleport where you are aiming at *
+    !lk
+    !look
+    
+    * Teleport where you are aiming at, but shift into the ground *
+    !lg
+    
+    * Teleport yourself forward by a specified amount *
+    !fw <amount>
+    !forward <amount>
+    
+    * Bypass objects and map structures * (might get stuck and sometimes if the distance is too high, good luck with that!)
+    !by
+    !bypass
+    !tr
+    !traverse
+    
+    * Recalculate sky (in case it is bugged)
+    !sky
+    
+    * Teleport into a predefined special room / coordinate *
+    !room
+    !ee
+    !egg
+]#
+
+#[
+Made by BIG MANNERS (STEAM_0:0:87011489)
+]#
+
+if(first() | dupefinished()){
+    
+    propSpawnUndo(0)
+    
+    ReverseHeight = 10
+    
+    WaitChairTP = 0
+    VoidRespawn = 0
+    JailerRespawn = 0
+    DelayAfterTP = 0
+    DELAY = 0
+    
+    NoVoids = 0
+    
+    Jailer = noentity()
+    Sky = vec(0,0,0),Killer = noentity()
+    
+    CHAIR = seatSpawn("models/nova/chair_plastic01.mdl", entity():pos()+vec(0,0,30),ang(0,0,0),1)
+    CHAIR:propNotSolid(1)
+    CHAIR:propFreeze(1)
+    CHAIR:setAlpha(0)
+    
+    Reverse = 0
+    #entity():propNotSolid(1)
+    
+    LastDeaths = array()
+    
+    function goto(POSITION:vector)
+    {
+        # Only if it's alive
+        if(!owner():isAlive()){return}
+        
+        CHAIR:setPos(POSITION)
+        CHAIR:use()
+        
+        WaitChairTP = 1
+    }
+    function findSky()
+    {
+        # Find sky
+        SkyR=rangerOffset(owner():pos()+vec(0,0,100),owner():pos()+vec(0,0,1000000))
+        if(SkyR:hitSky() && Sky == vec(0,0,0)){Sky = SkyR:pos()-vec(0,0,50)}
+        
+        
+        local Players = players()
+        Players:pushEntity(entity())
+        for(I=1,Players:count())
+        {
+            SkyR=rangerOffset(Players[I,entity]:pos()+vec(0,0,100),Players[I,entity]:pos()+vec(0,0,1000000))
+            if(SkyR:hitSky() && Sky == vec(0,0,0))
+            {
+                Sky = SkyR:pos()-vec(0,0,50)
+                Sky[1,number] = owner():pos():x()
+                Sky[2,number] = owner():pos():y()
+                
+                break
+            }
+        }
+        
+        if(Sky == vec(0,0,0)){ print("Couldn't find sky") }else{ print("Sky found") }
+    }
+    
+    findSky()
+    
+    # -24 in height
+    Voids = table(
+        #"gm_bigcity" = vec(-6028.510742,-1698.819336,-10669.156250),
+        "gm_bigcity" = vec(1929.411133,-2688.084961,-10060.425781),
+        "gm_bigcity_improved" = vec(1929.411133,-2688.084961,-10060.425781),
+        "gm_neon_bigcity" = vec(1929.411133,-2688.084961,-10060.425781),
+        "gm_construct" = vec(-4179.248047,4858.213867,2550),
+        "gm_construct_bay" = vec(1653.98,-761.703,55.7879),
+        "gm_construct_vinegret" = 	vec(-1920.69,-3364.26,-8159.42),
+        "gm_flatgrass" = 	vec(-646.337,629.955,-12713.2),
+        "gm_freespace_13" = 	vec(-4997.33,-354.365,-14594),
+        "gm_highway14800" = 	vec(4922.89,-4930.63,-3439.41),
+        "gm_ultrabox_optimized" = 	vec(922.781,350.955,300),
+        "gm_atomic" = vec(-8501.88,-1787.17,-12072),
+        "gm_genesis" = 	vec(948.083,-9667.98,-8837.37),
+        "rp_cscdesert_v2-1" = 	vec(279.424,-14181.7,47.7286)
+
+    )
+    
+    # Map may not always contain an easter egg, so I've picked interesting coords
+    EERooms = table(
+        "gm_bigcity" = 	vec(2185.98,1452.46,-9087.97),
+        "gm_neon_bigcity" = 	vec(2185.98,1452.46,-9087.97),
+        "gm_bigcity_improved" = 	vec(2185.98,1452.46,-9087.97),
+        
+        "gm_construct" = 	vec(-3561.37,-631.426,-155.969),
+        "gm_construct_bay" = 	vec(-4166.65,-644.073,-15.9688),
+        "gm_construct_vinegret" = 	vec(-5116.41,1368.15,-8191.97),
+        "gm_construct_minecraft" = 	vec(2031.79,3693.15,0.03125),
+        "gm_construct_remaster" = 	vec(-4269.58,233.507,-155.969),
+        
+        "gm_flatgrass" = 	vec(-725.901,-67.8414,-12768),
+        "gm_freespace_13" = 	vec(-5585.54,-679.908,-15872),
+        "gm_genesis" = 	vec(663.659,-5438.01,-15360),
+        "gm_atomic" = 	vec(6447.27,2283.86,-12352),
+        "gm_highway14800" = 	vec(1313.02,-5142.04,-4735.97),
+        "gm_wuhu" = 	vec(5320.71,-2597.04,-7423.97),
+        "gm_oceantown" = 	vec(-176.3,643.421,128.031)
+
+    )
+    
+    if(Voids[map(),vector] == vec(0,0,0))
+    {
+        NoVoids = 1
+    }
+    print("\""+map()+"\""+" = ", owner():pos())
+}
+event chat(Player:entity, Message:string, Team:number) {
+    
+    if(Player == owner() && Message[1] == "!")
+    {
+        hideChat(1)
+        Exploded = Message:explode(" ")
+        
+        Command = Exploded[1,string]
+        Argument = Exploded[2,string]
+        
+        
+        switch(Command)
+        {
+            case "!jj",
+                print("New height: ",ReverseHeight,">>",Argument:toNumber())
+                ReverseHeight = Argument:toNumber()
+                
+            break
+            case "!sethome",
+                HOME = owner():pos()
+                print("Home set")
+            break
+            case "!home",
+                if(HOME != vec(0,0,0))
+                {
+                    if(owner():isAlive())
+                    {
+                        goto(HOME)
+                    }else
+                    {
+                        LastDeathCoords = HOME
+                        print("LastDeathCoods set to HOME")
+                    }
+                }else
+                {
+                    print("HOME not set. do !sethome first")
+                }
+                
+            break
+            case "!tp",
+            case "!teleport",
+                if(Argument != "jailer")
+                {
+                    local PlayerName = findPlayerByName(Argument)
+                    local POS = PlayerName:pos()
+                    if(PlayerName:isValid() & POS:isInWorld())
+                    {
+                        # try to spawn above the player
+                        # if it's not possible , spawn behind (ground)
+                        # else inside their body (croush to unstuck)
+                        Above = PlayerName:pos() + vec(0,0,PlayerName:height()) + vec(0,0,owner():height() + 10)
+                        Behind = PlayerName:shootPos()-PlayerName:eye()*40
+                        Behind_Down = rangerOffset(Behind-vec(0,0,5),Behind-vec(0,0,1000000))
+                        if(Above:isInWorld())
+                        {
+                            POS = Above
+                        }
+                        elseif(Behind_Down:pos():isInWorld()){
+                            POS = Behind_Down:pos()
+                        }else{
+                            POS = PlayerName:pos() + vec(0,0,30)
+                        }
+                        
+                        if(!owner():isAlive())
+                        {
+                            LastDeathCoords = POS
+                            print("LastDeathCoods set to PLAYER")
+                        }else
+                        {
+                            goto(POS)
+                        }
+                    }
+                }else
+                {
+                    if(Jailer:isValid())
+                    {
+                        DelayAfterTP = 1
+                        if(!owner():isAlive())
+                        {
+                            LastDeathCoords = Jailer:pos()+vec(0,0,-10)
+                            print("LastDeathCoods set to JAILER")
+                        }else
+                        {
+                            goto(Jailer:pos()+vec(0,0,-10))
+                        }
+                    }else{print("Jailer isn't valid")}
+                }
+            break
+            case "!surface",
+            case "!up",
+                if(Sky != vec(0,0,0))
+                {
+                    Sky[1,number] = owner():pos():x()
+                    Sky[2,number] = owner():pos():y()
+                    Terrain = rangerOffset(Sky,Sky-vec(0,0,1000000))
+                    
+                    goto(Terrain:pos())
+                }else
+                {
+                    findSky()
+                }
+            break
+            case "!chip",
+                if(!owner():isAlive())
+                {            
+                    LastDeathCoords = entity():pos()
+                    print("LastDeathCoods set to CHIP")
+                }else
+                {
+                    goto(entity():pos())
+                }
+            break
+            case "!chiphere",
+                entity():setPos(owner():pos()+vec(0,0,1))
+            break
+            case "!look",
+            case "!lk",
+                InitialVector = owner():pos()+vec(0,0,owner():height())
+                DestinationVector = owner():aimPos()
+                
+                DirectionVector = DestinationVector - InitialVector
+                Magnitude = sqrt(DirectionVector:x()^2 + DirectionVector:y()^2 + DirectionVector:z()^2)
+                NormalizedDirectionVector = DirectionVector / Magnitude
+                
+                BackwardVector = NormalizedDirectionVector * owner():height() # using the player's height should avoid being stuck, increase if needed
+                
+                NewPositionVector = DestinationVector - BackwardVector
+                if(NewPositionVector:isInWorld())
+                {
+                    goto(NewPositionVector)
+                }
+            break
+            case "!lg",
+                rangerHitEntities(1)
+                rangerHitWater(0)
+                const Ranger = rangerOffset(100000,owner():aimPos(),vec(0,0,-1))
+                local Pos = Ranger:pos()
+                local Unit = 0
+                while(Pos:isInWorld())
+                {
+                    Unit -= 2
+                    Pos = Pos+vec(0,0,Unit)
+                }
+                goto(Pos)
+            break
+            case "!forward",
+            case "!fw",
+                Forward = owner():shootPos()+owner():eye()*Argument:toNumber()
+                
+                if(1 == 1) #Forward:isInWorld()
+                {
+                    goto(Forward)
+                    
+                }else{print("Can't reach that!")}
+            break
+            case "!traverse",
+            case "!tr",
+            case "!bypass",
+            case "!by",
+                InitialVector = owner():pos()+vec(0,0,owner():height())
+                DestinationVector = owner():aimPos()
+                DirectionVector = InitialVector - DestinationVector
+                
+                Magnitude = sqrt(DirectionVector:x()^2 + DirectionVector:y()^2 + DirectionVector:z()^2)
+                NormalizedDirectionVector = DirectionVector / Magnitude
+                
+                
+                for(I=100,10000,10)
+                {
+                    BackwardVector = NormalizedDirectionVector * (I + owner():height())
+                    NewPositionVector = DestinationVector - BackwardVector
+                    
+                    if(NewPositionVector:isInWorld())
+                    {
+                        
+                        # Laser down to find potential ground
+                        local Ranger = rangerOffset(100,NewPositionVector,vec(0,0,-1))
+                        const Ground = Ranger:pos()
+                        
+                        goto(Ground)
+                        break
+                    }
+                }
+            break
+            case "!sky",
+                findSky()
+            break
+            case "!killer",
+                if(Killer:isValid())
+                {
+                    LastDeathCoords = Killer:pos()
+                    print("LastDeathCoords set to Killer")
+                    Killer = noentity()
+                }else{print("Invalid killer")}
+            break
+            case "!perma",
+                local AAA = findPlayerByName(Argument)
+                if(AAA:isValid())
+                {
+                    Perma = AAA
+                    print("Perma respawn set to: "+Perma:name())
+                }else{print("Invalid."), Perma = noentity()}
+            break
+            case "!void",
+                Void = Voids[map(),vector]
+                if(Void != vec(0,0,0))
+                {
+                    if(!owner():isAlive())
+                    {
+                        LastDeathCoords = Void
+                        VoidRespawn = 1
+                        JailerRespawn = 0
+                        print("LastDeathCoods set to Void")
+                    }else
+                    {
+                        goto(Void)
+                    }
+                }else{ print("Void not set for current map!")}
+            break
+            case "!egg",
+            case "!ee",
+            case "!room",
+                Room = EERooms[map(),vector]
+                if(Room != vec(0,0,0))
+                {
+                    if(!owner():isAlive())
+                    {
+                        LastDeathCoords = Room
+                        VoidRespawn = 1
+                        JailerRespawn = 0
+                        print("LastDeathCoods set to Room")
+                    }else
+                    {
+                        goto(Room)
+                    }
+                }else{ print("Easter Egg Room not set for current map!")}
+            break
+            case "!reverse",
+                local PlayerName = findPlayerByName(Argument)
+                
+                # Failsafe for players with short names
+                if(!PlayerName:isValid())
+                {
+                    const Players_ = players()
+                    for(I=1,Players_:count())
+                    {
+                        if(Players_[I,entity]:name() == Argument){ PlayerName = Players_[I,entity]}
+                    }
+                }
+                if(PlayerName:isValid() & Argument != "")
+                {
+                    ReversedPlayer = PlayerName
+                    LastDeathCoords = ReversedPlayer:pos()+vec(0,0,40)
+                    Reverse = 1
+                    print("Reverse ON --> ",PlayerName:name())
+                    Jailer = noentity()
+                    JailerRespawn = 0
+                }else
+                {
+                    Reverse = 0
+                    print("Reverse OFF")
+                    
+                    owner():setMaterial("")
+                    owner():weapon():setMaterial("")
+                }
+            break
+            
+        }
+        
+        
+    }
+}
+# ---------------------------------------------------------
+event playerDeath(Victim:entity, Inflictor:entity, Attacker:entity) {
+    
+    const Me = owner()
+    if(Victim == Me & Me:pos():isInWorld()) #
+    {
+        concmd("stopsound")
+        ID = 0
+        
+        LastDeathCoords = Victim:pos()
+        People = players()
+        
+        
+        if(Inflictor:isValid()){Killer = Inflictor}
+        elseif(Attacker:isValid()){Killer = Attacker}
+        else{Killer = noentity()}
+        
+        
+        # ---------------------------------
+        # DETECT SPAWN KILLERS
+        # ---------------------------------
+        
+        # Any type of spawn killing
+        LastDeaths:pushVector(LastDeathCoords)
+        if(LastDeaths:count() > 3)
+        {
+            LastDeaths:removeVector(1)
+            
+            local DistDeaths = LastDeaths[1,vector]:distance(LastDeaths[2,vector])
+            local DistDeaths2 = LastDeaths[2,vector]:distance(LastDeaths[3,vector])
+            local DistDeaths3 = LastDeaths[2,vector]:distance(LastDeaths[3,vector])
+            
+            
+            # Another type of spawn killing
+            if(DistDeaths < 200 & DistDeaths2 < 200 & DistDeaths3 < 200 & Inflictor:type() != "gmod_wire_simple_explosive")
+            {
+                Void = Voids[map(),vector]
+                if(Void != vec(0,0,0))
+                {
+                    # Check if the spawn killing has been happening near the chip
+                    
+                    if(LastDeaths[3,vector]:distance(entity():pos()) < 200)
+                    {
+                        Void = Voids[map(),vector]
+                        LastDeathCoords = Void
+                        VoidRespawn = 1
+                        
+                    }else{
+                        LastDeathCoords = entity():pos()
+                    }
+                    
+                    print("Detected multiple deaths on the same spot.")
+                }
+            }
+        }
+        
+        # Specific to Wire Jailers
+        if(Inflictor:type() == "gmod_wire_simple_explosive" && !JailerRespawn)
+        {
+            if(findCanQuery())
+            {
+                findIncludeClass("gmod_wire_teleporter")
+                findInSphere(Victim:pos(),15)
+                
+                Array = findToArray()
+                
+                # gmod_wire_simple_explosive   9.4170999526978
+                # gmod_wire_teleporter         2.9998199939728
+    
+                for(I=1,Array:count())
+                {
+                    Jailer = Array[I,entity]:owner()
+                    if(!NoVoids)
+                    {
+                        Void = Voids[map(),vector]
+                        LastDeathCoords = Void
+                        VoidRespawn = 1
+                    }else
+                    {
+                        # Find random void
+                        ReversedPlayer = Jailer
+                        LastDeathCoords = ReversedPlayer:pos()+vec(0,0,40)
+                        Reverse = 1
+                        JailerRespawn = 0
+                    }
+                    
+                    print("You have been targeted by a Wire Jailer: " + Jailer:name() + ". Chip will try to respawn you in a safe zone.")
+                }
+            }
+        }
+        
+        # Determine if what killed you is a player or a prop
+        local TrueAttacker = ""
+        if(Attacker:isPlayer())
+        {
+            TrueAttacker = Attacker:name()
+        }else
+        {
+            TrueAttacker = Inflictor:owner():name()
+        }
+        
+        # Some entities don't have owners, we can still try to get them via getConnectedEntities
+        if(TrueAttacker == "")
+        {
+            local ConnectedProps = Inflictor:getConnectedEntities()
+            local ConnectedProp  = noentity()
+            for(I=1,ConnectedProps:count())
+            {
+                if(ConnectedProps[I,entity] == Inflictor | ConnectedProps[I,entity]:isPlayer()){ continue }
+                if(!ConnectedProps[I,entity]:isOnFire() | !ConnectedProps[I,entity]:isValid()){ continue }
+                
+                ConnectedProp = ConnectedProps[I,entity]
+            }
+            TrueAttacker = ConnectedProp:owner():name()
+        }
+        
+        # Print instructions        
+        if(LastDeathCoords == Victim:pos())
+        {
+            print("You got killed by:   "+TrueAttacker + "    --  (press --> (right) to change respawn point)")
+            #print("Inflictor: "+Inflictor:name()+ "   --   Attacker: "+Attacker:name() + "      (press --> (right) to change respawn point)")
+        }
+    
+        
+        Debug = ".\n"+
+        "Killer: "+Killer:name() 
+    }
+}
+
+# ---------------------------------------------------------
+event keyPressed(Player:entity, Key:string, Down:number, KeyBind:string) {
+    if(Player != owner()){ exit() }
+    
+    if(Down & Key == "right" & !owner():isAlive())
+    {
+        ID++
+    }
+    
+    if(Down & Key == "left" & !owner():isAlive())
+    {
+        ID--
+    }
+    
+    #if(Key == "f" & Down){ Increaser++ , print(Increaser)}
+    if(Down & !owner():isAlive())
+    {
+        if(ID < 0){ID = 1}
+        if(ID > People:count()+1){ID--}
+        if(ID == People:count()+1){
+            LastDeathCoords = owner():pos()
+            print("Your location")        
+        }else
+        {
+            if(ID != 0)
+            {
+                # try to spawn above the player
+                # if it's not possible , spawn behind (ground)
+                # else inside their body (croush to unstuck)
+                Above = People[ID,entity]:pos() + vec(0,0,People[ID,entity]:height()) + vec(0,0,owner():height() + 10)
+                Behind = People[ID,entity]:shootPos()-People[ID,entity]:eye()*40
+                Behind_Down = rangerOffset(Behind-vec(0,0,5),Behind-vec(0,0,1000000))
+                if(Above:isInWorld())
+                {
+                    LastDeathCoords = Above
+                }
+                elseif(Behind_Down:pos():isInWorld()){
+                    LastDeathCoords = Behind_Down:pos()
+                }else{
+                    LastDeathCoords = People[ID,entity]:pos() + vec(0,0,30)
+                }
+                
+                
+                print(People[ID,entity]:name() + " is your respawn target")
+            }
+        }
+    }
+}
+
+# ---------------------------------------------------------
+event playerLeftVehicle(Player:entity, Vehicle:entity) {
+    if(Player != owner()){ exit() }
+    
+    # Remove reverse invisibility if we leave the chair
+    if(Reverse & owner():keyUse())
+    {
+        owner():setMaterial("")
+        owner():weapon():setMaterial("")
+    }
+}
+# ---------------------------------------------------------
+event playerSpawn(Player:entity) {
+    
+    if(Player == owner())
+    {
+        
+        if(!Reverse)
+        {
+            owner():setMaterial("")
+            owner():weapon():setMaterial("")
+        }else{
+            owner():setMaterial("models/effects/vol_light001")
+            owner():weapon():setMaterial("models/effects/vol_light001")
+        }
+        
+        if(Perma:isValid())
+        {
+            LastDeathCoords = Perma:pos()
+            
+            Above = Perma:pos() + vec(0,0,Perma:height()) + vec(0,0,owner():height() + 10)
+            Behind = Perma:shootPos()-Perma:eye()*40
+            Behind_Down = rangerOffset(Behind-vec(0,0,5),Behind-vec(0,0,1000000))
+            if(Behind_Down:pos():isInWorld())
+            {
+                LastDeathCoords = Behind_Down:pos()
+            }
+            elseif(Above:isInWorld()){
+                LastDeathCoords = Above
+                
+            }else{
+                LastDeathCoords = Perma:pos() + vec(0,0,30)
+            }
+        }
+        
+        if(LastDeathCoords != vec(0,0,0) & (LastDeathCoords:isInWorld() || VoidRespawn) & !JailerRespawn)
+        {
+            CHAIR:setPos(LastDeathCoords)
+            CHAIR:use()
+            
+            WaitChairTP = 1
+            VoidRespawn = 0
+        }
+        
+        if(LastDeathCoords != vec(0,0,0) & (LastDeathCoords:isInWorld() || JailerRespawn) & !VoidRespawn)
+        {
+            CHAIR:setPos(Jailer:pos())
+            CHAIR:use()
+
+            WaitChairTP = 1
+            VoidRespawn = 0
+        }
+        
+    }
+}
+# ---------------------------------------------------------
+event tick()
+{
+    if(owner():isFlashlightOn()) { goto(HOME) }
+    
+    if(DELAY > 0){DELAY--}
+    if(DelayAfterTP > 0){DelayAfterTP--}
+
+    if(WaitChairTP & DELAY == 0 & !Reverse)
+    {
+        if(CHAIR:driver():isValid() & CHAIR:driver() == owner() & owner():pos():distance(CHAIR:pos()) < 23 & CHAIR:isValid())
+        {
+            #CHAIR:ejectPod()
+            
+            CHAIR:propDelete()
+            LastDeathCoords = vec(0,0,0)
+            WaitChairTP = 0
+            print("Teleported")
+        
+            
+        }
+    }
+    
+    if(Reverse & owner():isAlive())
+    {
+        CHAIR:setAng(ang(180,0,0))
+        
+        local Pos = ReversedPlayer:pos()+vec(0,0,ReverseHeight)
+        
+        if(Pos:isInWorld())
+        {
+            CHAIR:setPos(Pos)
+            
+            CHAIR:propNotSolid(1)
+            CHAIR:setAlpha(0)
+        }
+    }
+      
+    
+    # In case the chair gets deleted
+    if(!CHAIR:isValid() & propCanCreate())
+    {
+        CHAIR = seatSpawn("models/nova/chair_plastic01.mdl", entity():pos()+vec(0,0,30),ang(0,0,0),1)
+        CHAIR:propNotSolid(1)
+        CHAIR:propFreeze(1)
+        CHAIR:setAlpha(0)    
+    }
+    
+    
+
+  
+}
+event removed(P:number) {
+    if(P != 1){print("== RESPAWN DELETED =="), propDeleteAll(), reset()}
+}
+
+# In case entities are persistent, respawn where you logged off
+event playerDisconnected(Player:entity) {
+    if(Player == owner())
+    {
+        LastDeathCoords = Player:pos()
+        LastDeathCoords = entity():pos()
+    }
+}
+
+#[
+event entityCreated(Entity:entity) {
+    
+    
+    if(!DollList[Entity:type(),number]){ exit() }
+    if(Entity:owner() != owner()){ exit() }
+    
+    Distance = owner():pos():distance(Entity:pos())
+    if(Distance > 1){ exit() }
+    
+    Entity:ignite(1)
+    Entity:propFreeze(0) # do not own
+    Entity:deparent()
+    Entity:parentTo(owner():weapon())
+    Entity:propDelete()
+    Entity:parentToAttachment(owner(),"anim_attachment_head")
+    
+
+    
+    
+    print("Fly mode is active!")
+    
+}
+]#
+# Ma-de b-y BI-G-MA-N-NE-RS ( STE AM _ 0 : 0 : 87011489 )

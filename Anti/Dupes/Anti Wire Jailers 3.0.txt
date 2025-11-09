@@ -1,0 +1,150 @@
+@name Anti Wire Jailers 3.0
+@persist [Blacklisted_E2 Blacklisted_WIRE Blacklisted_PROPS LinkedProps]:table
+@persist LastScanTime PropQueue:entity
+
+
+
+#[
+    
+    The concept is pretty simple:
+    
+    1) One of the most commonly used jails to annoy people has a screen
+    2) Upon spawn, we place a plate in front of it
+    3) Jail becomes useless
+    4) ????
+    5) Profit!
+    
+    If the jail is removed, the plate associated also gets removed
+    
+    Note: does not work on already spawned jails
+    
+]#
+
+if(first() | duped() | dupefinished())
+{
+    entity():propMakePersistent(1)
+    # Setup
+    Blacklisted_E2 = table(
+        "Jail with EGP" = 1
+    )
+    
+    Blacklisted_WIRE = table(
+        "gmod_wire_egp" = 1
+        #"gmod_wire_simple_explosive" = 1,
+        #"gmod_wire_teleporter" = 1
+    )
+    
+    Blacklisted_PROPS = table(
+        "gmod_wire_expression2" = 1
+    )
+    
+    LinkedProps = table()
+    
+    PropQueue = noentity()
+    
+    LastScanTime = systime()
+    
+    function entity findJailDupe(E2:entity)
+    {
+        # Find attached Screen
+        local WIRE_PROP = noentity()
+        const Array = E2:getConnectedEntities()
+        
+        for(I=1,Array:count())
+        {
+            local Prop = Array[I,entity]
+            if(!Blacklisted_WIRE[Prop:type(),number]){ continue }
+            
+            # Prop has been found
+            WIRE_PROP = Prop
+            break
+        }
+        
+        return WIRE_PROP
+    }
+    
+}
+
+event entityCreated(Entity:entity) {
+    
+    # Prevent chip crash
+    if(!Blacklisted_PROPS[Entity:type(),number]){ exit() }
+    
+    # Only works on dupes
+    local Name = Entity:getName()
+    
+    # Ensure it is a known e2 jail
+    if(!Blacklisted_E2[Name,number]){exit()}
+    
+    # Get attached screen
+    local Screen = findJailDupe(Entity)
+    
+    # Check if wire prop exists or not
+    if(!Screen:isValid()){ print("Invalid Screen"), exit()}
+    
+    # Screen is valid
+    print(Entity:owner():name() + " spawned a jail")
+    
+    local CounterProp2 = PropQueue
+    PropQueue = noentity()
+    
+    # If prop isn't valid
+    if(!CounterProp2:isValid())
+    {
+        print("Something went wrong: CounterProp2 is invalid (check prop queue)")
+        exit()
+    }
+    
+    # Prop is valid
+    CounterProp2:setAlpha(0)
+    CounterProp2:setCollisionGroup(_COLLISION_GROUP_PASSABLE_DOOR)
+    
+    # Link Screen with CounterProp
+    LinkedProps[CounterProp2:id(),entity] = Screen
+    
+}
+
+event tick()
+{
+    # Scan every x ms
+    if(systime() - LastScanTime > 0.05 & perf())
+    {
+        LastScanTime = systime()
+        
+        Keys = LinkedProps:keys()
+        #print(Keys:count())
+        for(I=1,Keys:count())
+        {
+            # Key holds the entity id, which can be used to retrieve the associated Screen id
+            local Key = Keys[I,number]
+            
+            local ExplosiveEnt = LinkedProps[Key,entity]
+            local CounterProp = entity(Key)
+            
+            # Check if Jails has been removed
+            if(!ExplosiveEnt:isValid()){ CounterProp:propDelete(), LinkedProps:removeEntity(Key), continue }
+            
+            
+            # Keep the egp blocker in place (in case they moved the jail)
+            local Pos = ExplosiveEnt:pos()+ExplosiveEnt:up()/9
+            
+            CounterProp:setPos(Pos)
+            CounterProp:setAng(ExplosiveEnt:angles())
+        }
+        
+        # Respawn items in the queue
+        if(!PropQueue:isValid() & propCanCreate())
+        {
+            PropQueue = propSpawn("models/hunter/plates/plate1x1.mdl",entity():pos()+vec(0,0,30),ang(0,0,0),1)
+        }
+        
+    }
+}
+
+# In case it gets halted, fully reset the chip
+event removed(Resetting:number) {
+    propDeleteAll()
+    reset()
+}
+
+

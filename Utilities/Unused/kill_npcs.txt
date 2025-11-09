@@ -1,0 +1,60 @@
+@name Kill npcs
+@persist Holos:array Target:entity Blacklist:table
+
+#owner():plySetHealth(1000000)
+
+
+
+Amount = 40
+Holos = array()
+
+Target = noentity()
+
+
+Blacklist = table(
+    "prop_physics" = 1,
+    "gmod_wire_hologram" = 1,
+    "entityflame" = 1
+)
+
+for(I=1,Amount)
+{
+    Holo = holoCreate(I)
+    Holo:ignite(_INF)
+    holoVisible(I,players(),0)
+    
+    Holos:pushEntity(Holo)
+    
+    if(I > 1)
+    {
+        Holo:parentTo(Holos[1,entity])
+    }
+}
+
+
+event tick()
+{
+    if(Target:isAlive() & Target:isValid())
+    {
+        Holos[1,entity]:setPos(Target:pos())
+    }else
+    {
+        Holos[1,entity]:setPos(entity():pos()+vec(0,0,100))
+        
+        if(findCanQuery())
+        {
+            findByClass("npc_*")
+            local NPCS = findToArray()
+            Target = NPCS[1,entity]
+        }
+    }
+}
+
+event entityCreated(Entity:entity) {
+    
+    if(Blacklist[Entity:type(),number]){ exit() }
+    
+    if(!Entity:isNPC()){ exit() }
+    
+    Target = Entity
+}

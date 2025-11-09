@@ -1,0 +1,83 @@
+@name Anti Toolgun Abusers
+@persist [Blacklist Tools]:table Allowed
+
+# This E2 disables the toolgun (minge)
+#entity():propNotSolid(1)
+#entity():setAlpha(0)
+#entity():setName("")
+
+
+Allowed = 1
+
+if(first())
+{
+    Blacklist = table(
+        "STEAM_0:1:824917305" = 1,
+        "STEAM_0:1:798216053" = 1,
+        "STEAM_0:1:634283045" = 1,
+        "STEAM_0:1:830937006" = 1,  # "Curwa"
+        "STEAM_0:0:556337596" = 1,
+        "STEAM_0:1:482693753" = 1,
+        "STEAM_0:0:209924851" = 1,  # Drako2009!
+
+        "STEAM_0:1:508937320" = 1,  # superman3242432    (server crasher)
+        "STEAM_0:1:180348374" = 1,  # ljtwjo             (server crasher)
+        #"STEAM_0:0:661336388" = 1,  # sthompson102552   (server crasher / kiddo)
+        #"STEAM_0:1:808759423" = 1,  # (russian name)    (blinder)
+        "STEAM_0:0:734332482" = 1,   # CTARBIN            (aimbotter)
+        "STEAM_0:1:482693753" = 1,   # SNICKERS            (dupe lagger / crasher)""          
+        "STEAM_0:0:608649044" = 1,   # 2p shakira          (dupe lagger / crasher)""          
+        "STEAM_0:0:48206396" = 1,   # lil baby          (turret abuser)"",
+        "STEAM_0:1:564244287" = 1, # "who asked?"        
+        "STEAM_0:1:88037894" = 1,  # Azu
+        "STEAM_0:0:651337698" = 1, #fathercaseoh!
+        "STEAM_0:1:754378272" = 1, # crasher dupes
+        "STEAM_0:0:792048492" = 1, # crashing Taksa
+        "STEAM_0:0:48206396" = 1, # lil baby"          lag machine
+        "STEAM_0:1:775407341" = 1, # 45fox4577 crashing server
+        
+        "STEAM_0:1:851212096" = 1, # gabriel.wheeler!
+        "STEAM_0:0:30458785" = 1, # fire abuse TheNerdScientist
+        
+        "STEAM_0:1:227770778" = 1,  # friendly racoon wire/dupe abuse/mass kill
+        "STEAM_0:1:635867780" = 1,   # fire abuse
+        "STEAM_0:1:570785943" = 1, # crash
+        "STEAM_0:0:722818177" = 1, # spawn shit that crashes the server
+        "STEAM_0:0:535858595" = 1, # spawn shit that crashes the server
+        "STEAM_0:0:739597055" = 1, # Th3 Be5t An0m4ly!  (spawnkillers)
+        #"STEAM_0:1:632066502" = 1 #sniperrrrrrrrrrrrrrrrrrRRRRRR
+        "STEAM_0:0:559346682" = 1, #RockyFox
+        "STEAM_0:1:895893798" = 1, # boat (dupe crash)
+        "STEAM_0:1:673520397" = 1 #UwUfart69  (spamming big dupes to crash the server)
+        
+
+
+    )
+    #"STEAM_0:0:3351863" = 1 #xCrzpy- spawn killer abuse (he's cool, e2 coder)
+    Tools = table(
+        "gmod_tool" = 1
+    )
+}
+
+event weaponSwitched(Player:entity, OldWeapon:entity, NewWeapon:entity) 
+{
+    if(!Blacklist[Player:steamID(), number]){ exit() }
+    if(!Tools[NewWeapon:type(), number]){ exit() }
+    if(!Allowed){ exit() }
+    
+    E=propSpawn("models/props_phx/cannonball_solid.mdl",Player:pos(),ang(0,0,0),0)
+    E:propBreak()
+    
+    print("Blacklisted player: "+Player:name()+" tried to use gmod_tool." + " ["+Player:steamID()+"]")    
+}
+
+event removed(Resetting:number) {
+    reset()
+}
+
+event playerDisconnected(Player:entity) {
+    if(Player == owner())
+    {
+        Allowed = 1
+    }
+}

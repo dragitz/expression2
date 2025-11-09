@@ -1,0 +1,50 @@
+@name Bottle Shooter
+@model models/props_wasteland/controlroom_desk001b.mdl
+@persist Angles Time 
+
+@persist [Bottle1 Bottle2 Bottle3 Bottle4]:entity 
+
+Bottles = table()
+Time = curtime()
+
+OriginalAngles = entity():angles()
+entity():propFreeze(1)
+
+Bottle1 = noentity()
+Bottle2 = noentity()
+Bottle3 = noentity()
+Bottle4 = noentity()
+
+event tick()
+{
+    
+    local Compare = curtime()
+    
+    entity():setAng(OriginalAngles)
+    
+    if(Compare - Time >= 0.5)
+    {
+        if(!Bottle1:isValid()){ Bottle1 = propSpawn("models/props_junk/glassbottle01a.mdl",entity():pos()+vec(random(-20,20),random(-50,50),random(23,40)),ang(random(0,360),random(0,360),random(0,360)),1),Bottle1:emitSound("player/suit_sprint.wav",100,1.0)}
+        if(!Bottle2:isValid()){ Bottle2 = propSpawn("models/props_junk/glassbottle01a.mdl",entity():pos()+vec(random(-20,20),random(-50,50),random(23,40)),ang(random(0,360),random(0,360),random(0,360)),1),Bottle2:emitSound("player/suit_sprint.wav",100,1.0)}
+        if(!Bottle3:isValid()){ Bottle3 = propSpawn("models/props_junk/glassbottle01a.mdl",entity():pos()+vec(random(-20,20),random(-50,50),random(23,40)),ang(random(0,360),random(0,360),random(0,360)),1),Bottle3:emitSound("player/suit_sprint.wav",100,1.0)}
+        if(!Bottle4:isValid()){ Bottle4 = propSpawn("models/props_junk/glassbottle01a.mdl",entity():pos()+vec(random(-20,20),random(-50,50),random(23,40)),ang(random(0,360),random(0,360),random(0,360)),1),Bottle4:emitSound("player/suit_sprint.wav",100,1.0)}
+        
+        Bottle1:setColor(vec(255,0,0))
+        Bottle2:setColor(vec(255,255,0))
+        Bottle3:setColor(vec(0,255,255))
+        Bottle4:setColor(vec(255,0,255))
+        
+        Random = random(-5,5)
+        Bottle1:setAng(Bottle1:angles()+ang(10+Random,10+Random,10+Random))
+        Bottle2:setAng(Bottle2:angles()+ang(10+Random,10+Random,10+Random))
+        Bottle3:setAng(Bottle3:angles()+ang(10+Random,10+Random,10+Random))
+        Bottle4:setAng(Bottle4:angles()+ang(10+Random,10+Random,10+Random))
+    }
+}
+
+event removed(_:number)
+{
+    propDeleteAll()
+}
+
+

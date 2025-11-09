@@ -1,0 +1,30 @@
+@name forced respawn
+@persist Can
+
+owner():noCollideAll(1)
+
+if(clk("respawn"))
+{
+    
+    concmd("+attack")
+    
+    timer("back",1000)
+    
+}
+
+if(clk("back"))
+{
+    
+    concmd("-attack")
+}
+
+
+event playerDeath(Victim:entity, Inflictor:entity, Attacker:entity) {
+    
+    if(Victim == owner())
+    {
+        
+        timer("respawn",2000)
+    }
+    
+}

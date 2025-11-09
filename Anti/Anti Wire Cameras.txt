@@ -1,0 +1,58 @@
+@name No cameras allowed
+@persist Max Items:array
+
+if(dupefinished()){ reset() }
+
+entity():propNotSolid(1)
+#entity():setAlpha(0)
+entity():setName("")
+
+if(first())
+{
+    findByClass("gmod_wire_rt_camera")
+    Items = findToArray()
+    
+    Max = Items:count()
+    
+    for(I=1,Items:count())
+    {
+        Number = Items[I,entity]:id()
+        
+        holoCreate(Number)
+        holoModel(Number,"cube")
+        holoColor(Number,vec(0,0,0))
+        holoScale(Number,vec(-2,2,2))
+        holoPos(Number, Items[I,entity]:pos())
+        holoParentAttachment(Number,Items[I,entity],"anim_attachment_head")
+        
+        holoVisible(Number,players(),0)
+        holoVisible(Number,owner(),1)
+        holoVisible(Number,Items[I,entity]:owner(),1)
+    }
+    
+    print("Disabled "+Max+" cameras")
+}
+
+event entityCreated(Entity:entity) {
+    
+    
+    if(Entity:type() == "gmod_wire_rt_camera")
+    {
+        Number = Entity:id()
+        
+        holoCreate(Number)
+        holoModel(Number,"cube")
+        holoColor(Number,vec(0,0,0))
+        holoScale(Number,vec(-2,2,2))
+        holoPos(Number, Entity:pos())
+        holoParentAttachment(Number,Entity,"anim_attachment_head")
+        
+        holoVisible(Number,players(),0)
+        holoVisible(Number,owner(),1)
+        holoVisible(Number,Entity:owner(),1)
+        
+        print("Disabled "+Entity:owner():name()+"'s camera")
+    }
+}
+
+

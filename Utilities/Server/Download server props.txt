@@ -1,0 +1,131 @@
+@name Download server props
+
+@persist Props:array
+@persist I PropID IsUsingOldWiremod
+@persist [Script Final_name]:string
+
+#
+Filename = "DESTINY_HELICOPTER"
+
+IsUsingOldWiremod = 0
+
+# Find all props in the world and filter out unnecessary stuff
+findByClass("prop_physics")
+Props = findToArray()
+print(Props:count())
+
+I = 1
+PropID = 1
+Host = hostname():replaceRE("[^%w%s%p]",""):replace("[",""):replace("]",""):replace(" ","")
+Final_name = map()+"_"+Filename+"_"+Host+"_"+time("year")+time("month")+time("day")+time("hour")+time("min")+time("sec") # Do not edit this one
+Script = ""
+
+Script += "Table = table()"
+event tick()
+{
+    if(perf(80))
+    {
+        # Do not load outside things
+        if(
+            Props[PropID,entity]:pos():isInWorld() &        # Prop must not be out of bounds or in unreachable spots
+            Props[PropID,entity]:pos() != vec(0,0,0) &      # Prop's pos must not be 0
+            Props[PropID,entity]:owner() != world() &       # Prop's owner must be a player
+            !Props[PropID,entity]:isPlayer() &              # Players do not count
+            !Props[PropID,entity]:isWeapon() &              # Weapons do not count
+            Props[PropID,entity]:mass() > 0                 # Ensures we remove any weird prop with 0 mass
+        )
+        {
+            Model = Props[PropID,entity]:model(),
+            Pos = Props[PropID,entity]:pos(),
+            Ang = Props[PropID,entity]:angles(),
+            Mass = Props[PropID,entity]:mass(),
+            
+            Color = Props[PropID,entity]:getColor(),
+            Alpha = Props[PropID,entity]:getAlpha(),
+            Material = Props[PropID,entity]:getMaterial(),
+            
+            Frozen = Props[PropID,entity]:isFrozen()
+            Frozen = 1 # force it to be frozen
+            
+            if(IsUsingOldWiremod)
+            {
+                Pos_ = "vec("+Pos:x()+","+Pos:y()+","+Pos:z()+")"
+                Ang_ = "ang("+Ang:pitch()+","+Ang:yaw()+","+Ang:roll()+")"
+                
+                Color_ = "vec("+Color:x()+","+Color:y()+","+Color:z()+")"
+                
+                Script += "\nTable["+I+",array] = array(\""+Model+"\","+Pos_+","+Ang_+","+Mass+","+Color_+","+Alpha+",\""+Material+"\","+Frozen+")"
+                
+            }else
+            {
+                Script += "\nTable["+I+",array] = array(\""+Model+"\","+Pos+","+Ang+","+Mass+","+Color+","+Alpha+",\""+Material+"\","+Frozen+")"
+            }
+
+            I += 1
+        }
+        
+        PropID += 1
+        
+        
+        if(PropID > Props:count()){
+            
+            if((I-1) > 0)
+            {
+                local Date = date()
+                FinalScript = ""
+                FinalScript += "@persist I Max Table:table\n"
+                FinalScript += Script
+                FinalScript += "\n #[Created on date: " + Date:toString() + "]# \nMax = Table:count()"
+                
+                FinalScript += "\n
+                I = 1
+                event tick()
+                {
+                    if(propCanCreate() & perf())
+                    {
+                        # Spawn from table and increase Index
+                "
+                
+                FinalScript += "
+                # Entity=propSpawn(entity template,vector pos,angle rot,number frozen)
+                Obj = propSpawn(Table[I,array][1,string],Table[I,array][2,vector],Table[I,array][3,angle],Table[I,array][8,number])
+                Obj:setMass(Table[I,array][4,number])
+                Obj:setColor(Table[I,array][5,vector])
+                Obj:setAlpha(Table[I,array][6,number])
+                Obj:setMaterial(Table[I,array][7,string])
+                
+                Obj:propFreeze(Table[I,array][8,number])
+                "
+                
+                FinalScript += "
+                   if(Obj:isValid()){ I += 1 }
+                
+                    if(I > Max){ hint(\"Finished spawning!\",3.5), print(\"Finished spawning!\"), selfDestruct()}
+                }"
+                
+                FinalScript += "}\n"
+                fileWrite(">e2shared/"+Final_name+".txt",FinalScript)
+                hint("File saved in e2shared/"+Final_name+".txt",3.5)
+                print("File saved in e2shared/"+Final_name+".txt")
+                
+            }else{
+                
+                hint("No valid props were found",4.5)
+            }
+            
+            selfDestruct()
+        }
+        
+        
+    
+    }
+}
+
+
+
+
+
+
+
+
+

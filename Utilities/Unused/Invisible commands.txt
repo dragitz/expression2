@@ -1,0 +1,26 @@
+@name invisible commands
+@persist Owner:entity I
+@inputs E:wirelink
+
+
+if(dupefinished()){ reset() }
+
+if(first()){E:egpClear()}
+
+event chat(Player:entity, Message:string, _:number) {
+    if (
+    (Message[1] == "/" | Message[1] == "!" | Message[1] == "#" | Message[1] == "+" | Message[1] == "-" | Message[1] == ".")
+    
+    & Message[2] != "g") {
+        
+        I += 1
+        
+        MSG = Player:name() + " ran:       "+Message
+        print(MSG)
+        hint(MSG,3.5)
+        
+        if(I >= 20){E:egpClear()}
+        E:egpText(I,MSG + "\n",vec2(10,20*I))
+        
+    }
+}

@@ -1,0 +1,77 @@
+@name Danger Zones (EGP)
+@inputs E:wirelink
+
+@persist [List TrackedObjects]:table Skip
+
+if(first())
+{
+    E:egpClear()
+    TrackedObjects = table()
+    
+    List = table(
+    
+        "m9k_proxy" = 1,
+        "m9k_thrown_nitrox" = 1,
+        "m9k_thrown_sticky_grenade" = 1,
+        "m9k_thrown_m61" = 1,
+        "prop_combine_ball" = 1,
+        "npc_grenade_frag" = 1,
+        "item_healthkit" = 1
+        
+        
+    )
+    
+    findByClass("m9k_proxy")
+    const A = findToArray()
+    foreach(_:number, Obj:entity = A)
+    {
+        TrackedObjects:pushEntity(Obj)
+    } 
+}
+
+event entityCreated(Entity:entity) {
+    
+    if(!List[Entity:type(),number]){ exit() }
+    
+    TrackedObjects:pushEntity(Entity)
+}
+
+event tick()
+{
+    # Skip a few frames, as we don't need constant updates
+    # Around 100 ops per object
+    
+    Skip++
+    if(Skip >= 6 & ops() < 3000)
+    {
+        E:egpClear()
+        const Temp = TrackedObjects
+        foreach(I:number, Obj:entity = Temp) {
+            
+            if(!Obj:isValid()){ TrackedObjects:removeEntity(I), continue }
+            
+            Distance = owner():pos():distance(Obj:pos())
+            if(Distance >= 1500){ continue } # avoid rendering objects far away
+            
+            Width = 15000 / Distance
+            Height = 15000 / Distance
+                    
+            E:egp3DTracker(I,Obj:pos() + vec(0,0,Obj:height()/2))
+            E:egpParent(I+TrackedObjects:count(),I)
+            
+            E:egpBox(I+TrackedObjects:count(),vec2(0,0),vec2(Width,Height))
+            E:egpColor(I+TrackedObjects:count(),vec(100,0,0))
+            
+            #const Norm = normalize(Distance, 0, 3000)
+            const Norm = (Distance - 0) / (3000 - 0)
+            const Alpha = 255 - Norm * 255
+            
+            E:egpAlpha(I+TrackedObjects:count())
+            E:egpParent(I+TrackedObjects:count(),I)
+        }
+        Skip = 0
+    }
+
+    
+    
+}

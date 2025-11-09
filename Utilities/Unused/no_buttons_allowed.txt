@@ -1,0 +1,43 @@
+@name No bitches allowed
+@persist I Max Items:array
+
+if(first())
+{
+    I = 1
+    findByClass("gmod_wire_button")
+    Items = findToArray()
+    
+    Max = Items:count()
+}
+
+event tick()
+{
+    if(I > Max){print("Consored amount: "+Max), selfDestruct()}
+    
+    if(propCanCreate() & perf())
+    {
+        # Spawn from table and increase Index
+        
+        # Entity=propSpawn(entity template,vector pos,angle rot,number frozen)
+        Forward = Items[I,entity]:up()
+        Prop = propSpawn(Items[I,entity]:model(),Items[I,entity]:pos()+Forward/20,1)
+        Prop:setAng(Items[I,entity]:angles())
+        
+        print("Button owner: "+Prop:owner():name())
+        
+        I += 1
+        
+        
+    }
+}
+
+event entityCreated(Entity:entity) {
+    if(Entity:type() == "gmod_wire_button")
+    {
+        
+        Forward = Entity:up()
+        Prop = propSpawn(Entity:model(),Entity:pos()+Forward/20,1)
+        Prop:setAng(Entity:angles())
+        
+    }
+}

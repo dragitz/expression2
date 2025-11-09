@@ -1,0 +1,127 @@
+@name Anti D.I.G Force
+@persist [Data E2Owners]:table Cube:entity
+@persist Tick MaxTick RanAlready
+
+if(first() | duped())
+{
+    propSpawnUndo(0)
+
+    Tick = 0
+    MaxTick = 200
+        
+    Cube = propSpawn("models/hunter/blocks/cube025x025x025.mdl",entity():pos()+vec(0,0,30),1)
+    Cube:setCollisionGroup(_COLLISION_GROUP_PASSABLE_DOOR)
+    Cube:propDraw(0)
+    
+
+    Data = table(
+        "attack" = 1,
+        "weapon_crowbar" = 1,
+        "D.I.G Force" = 1
+    )
+    E2Owners = table()
+    
+    RanAlready = 0
+    function findE2Owners()
+    {
+        if(!findCanQuery()){ exit() }
+        
+        findByClass("gmod_wire_expression2")
+        local Arr = findToArray()
+        foreach(_:number, Entity:entity = Arr)
+        {
+            if(!Data[Entity:getName(),number]){ continue }
+            
+            const Owner = Entity:owner()
+            E2Owners[Owner:steamID64(),entity] = Entity
+            if(!RanAlready)
+            {
+                print(Entity:getName() + "  " + Owner:name())
+            }
+        }
+    }
+    findE2Owners()
+    
+    RanAlready = 1
+    # Ensure cube has spawned    
+    if(!Cube:isValid())
+    { 
+        print("Invalid cube! Please respawn the chip!"), selfDestruct(), exit()
+    }
+
+}
+
+event tick()
+{
+    Tick++
+    if(Tick > MaxTick){ Tick = 0 }
+    if(!Tick)
+    {
+        # fully reset table, no need to check if entity is valid or not
+        E2Owners = table()
+        findE2Owners()
+    }
+}
+event keyPressed(Player:entity, Key:string, Down:number, KeyBind:string) {
+    if(!Down | !Data[KeyBind,number]){ exit() }
+    
+    if(!Data[Player:weapon():type(),number]){ exit() }
+    
+    if(!E2Owners[Player:steamID64(),entity]:isValid()){ exit() }
+    
+    const AimEnt = Player:aimEntity()
+    if(AimEnt:isValid())
+    {
+        if(AimEnt:isPlayer() & !AimEnt:inGodMode())
+        {
+            const Forward = Player:shootPos() + Player:eye() * 10
+            Cube:setPos(Forward)
+        }
+    }else
+    {
+        # Player might be slightly offsetting its aiming pos,
+        # find in cylinder
+        const Origin = Player:shootPos()
+        const Dir = Player:eye()
+        const Radius = 50        # radius of the aim circle
+        const Length = 1000      # how far to check
+    
+        # Find everything in a long sphere (cylinder-like check area)
+        findInSphere(Origin + Dir * (Length / 2), Length / 2)
+        findSortByDistance(Origin)
+        const Arr = findToArray()
+        
+        local FoundPlayer = 0
+        foreach(I:number, E:entity = Arr)
+        {
+            if(!E:isPlayer() | E == Player){ continue }
+    
+            const Relative = E:boxCenterW() - Origin
+            const ForwardDist = Relative:dot(Dir)
+            if(ForwardDist < 0 | ForwardDist > Length){ continue }
+    
+            local PerpendicularDist = (Relative - Dir * ForwardDist):length()
+            if(PerpendicularDist > Radius){ continue }
+            
+            # Laser sight
+            rangerHitEntities(1)
+            const Ranger = rangerOffset(Length,Origin,Relative)
+            if(Ranger:pos():distance(E:boxCenterW()) < Radius)
+            {
+                FoundPlayer = 1
+                break
+            }
+        }
+        
+        if(FoundPlayer)
+        {
+            const Forward = Player:shootPos() + Player:eye() * 5
+            Cube:setPos(Forward)
+        }
+    }
+
+}
+
+event removed(Resetting:number) {
+    print(entity():getName() + " - got removed!")
+}

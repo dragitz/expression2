@@ -1,0 +1,163 @@
+@name Dupe Cloner
+@persist [Data TmpDupe FinalDupe]:table Who:entity 
+@persist Last MIN_DUPE_SIZE MAX_DELAY Index SpawnMode FORCED_FROZEN
+
+# By BIG MANNERS
+
+# Simple script that tries to detect props spawned by the duplicator (only handles one dupe at a time)
+# you can improve the script by:
+#    handle multiple dupes at once
+#    handle new dupes while spawning
+#    saving and loading from a file in >e2shared
+#    create a nice egp menu where you can easily load them
+#    storing color and material data, as well as welded props
+#    potentially save already spawned dupes (complex) by checking their spawn time to figure out if a prop is part of a dupe
+#
+# you do you fam.
+
+if (first())
+{
+    
+    # Minimum threshold of props to be considered as dupe
+    MIN_DUPE_SIZE = 5
+    
+    # Delay between spawned props, some servers have their own limiter in place.
+    # Increse if dupe isn't detected (0.07 works for the majority of dupes)
+    # Default: 0.033
+    #
+    MAX_DELAY     = 0.033
+    
+    # Force all props to be frozen upon spawn
+    FORCED_FROZEN = 1
+    
+    # ---- Do not alter from here
+    Data = table(
+        "attack" = 1,
+        "duplicator" = 1,
+        "prop_physics" = 1
+    )    
+    Who = _NO_ENTITY
+    Last = systime()
+    
+    #[
+        Tmp Dupe format:
+            1: model
+            2: pos
+            3: rotation
+            4: isFrozen
+    ]#
+    
+    # Setup
+    TmpDupe = table()
+    FinalDupe = table()
+    Index = 1
+    SpawnMode = 0
+    
+    propSpawnUndo(0)
+}
+
+
+event keyPressed(Player:entity, Key:string, Down:number, KeyBind:string) {
+    
+    # Anti spam
+    if(!Down || Player:isTyping()){ exit() }
+    
+    # Filter
+    if(!Data[KeyBind,number]){ exit() }
+    if(!Data[Player:tool(),number]){ exit() }
+    
+    Who = Player
+    Last = systime()
+}
+
+
+event entityCreated(Entity:entity) {
+    # Anti crash/override while spawning
+    if(!Data[Entity:getClass(),number] || SpawnMode){ exit() }
+    
+    if(Who != Entity:owner()){ exit() }
+    
+    # hacky fix for the menu spawn while holding the dupe tool
+    if( Entity:pos():distance( owner():aimPos() ) <= 27 ){ exit() }
+    
+    const Diff = systime() - Last
+    
+    if(Diff < MAX_DELAY)
+    {
+        Last = systime()
+        
+        local Pattern = table(
+            "model" = Entity:model(),
+            "pos" = Entity:pos(),
+            "angles" = Entity:angles(),
+            "frozen" = Entity:isFrozen()
+        )
+        
+        TmpDupe[Index,table] = Pattern
+        Index = Index + 1
+        
+    }
+}
+
+event chat(Player:entity, Message:string, Team:number) {
+    
+    if(Player != owner()){ exit() }
+    
+    if(Message == "!spawn" & !SpawnMode)
+    {
+        if(FinalDupe:keys():count() < MIN_DUPE_SIZE){ print("Invalid dupe size"), exit() }
+        SpawnMode = 1
+        exit()
+    }
+    
+    SpawnMode = 0
+}
+
+
+event tick()
+{
+    if(!Who:isValid()){ 
+    
+        # Spawn command
+        if(SpawnMode & propCanCreate() & FinalDupe:keys():count() > 0)
+        {
+            local Model = FinalDupe[SpawnMode,table]["model",string]
+            local Pos = FinalDupe[SpawnMode,table]["pos",vector]
+            local Angles = FinalDupe[SpawnMode,table]["angles",angle]
+            local Frozen = FinalDupe[SpawnMode,table]["frozen",number]
+            
+            if(FORCED_FROZEN){ Frozen = 1}
+            
+            local TEST = propSpawn(Model,Pos,Angles,Frozen)
+            if(TEST:isValid())
+            {
+                # Now check if there are more props to be spawned
+                if(SpawnMode < FinalDupe:keys():count())
+                {
+                    SpawnMode++
+                }else
+                {
+                    SpawnMode = 0
+                    print("Spawning done..")
+                }
+            }
+        }
+        exit()
+    }
+    
+    # Auto delete invalid
+    if(systime() - Last > 1)
+    {
+        # copy
+        if(TmpDupe:keys():count() >= MIN_DUPE_SIZE)
+        {
+            FinalDupe = TmpDupe
+            print("New dupe saved! dupe spawned by: ",Who:name())
+            
+            TmpDupe = table()
+        }
+        
+        Who = _NO_ENTITY
+        Index = 1
+    }
+}

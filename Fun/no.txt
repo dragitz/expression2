@@ -1,0 +1,97 @@
+@name no
+@persist Sounds:array ID Target:entity
+@persist Tick MaxTick
+
+if(first())
+{
+    Tick = 0
+    MaxTick = 10
+    
+    # put the name of a player you want to target
+    # if player is valid then e2 will become invisible
+    Target = findPlayerByName("")
+    
+    if(Target:isValid())
+    {
+        entity():propDraw(0)
+        entity():propNotSolid(1)
+        entity():propNoDupe(1)
+    }
+    
+    entity():propFreeze(1)
+    ID = randint(10)
+    Sounds = array(
+        "npc_alyx.no01",
+        "npc_alyx.no02",
+        "npc_alyx.no03",
+        "vo/npc/alyx/hurt04.wav",
+        "vo/npc/alyx/hurt05.wav",
+        "vo/npc/alyx/hurt06.wav",
+        "vo/npc/alyx/hurt08.wav",
+        "vo/npc/alyx/ohgod01.wav",
+        "vo/npc/alyx/uggh01.wav",
+        "vo/npc/alyx/uggh02.wav",
+        "vo/npc/female01/moan02.wav",
+        "vo/npc/female01/moan03.wav",
+        "vo/npc/female01/pain06.wav",
+        "vo/npc/female01/pain07.wav",
+        "vo/npc/female01/pain08.wav",
+        "vo/npc/female01/pain09.wav"
+        
+    )
+    
+    function playSound()
+    {
+        if(!soundPlaying(ID))
+        {
+            const Sound = Sounds[random(ID,Sounds:count()+1),string]
+            
+            entity():soundPlay(ID,1,Sound)
+            soundPitch(ID,random(50,120))
+            
+        }
+    }
+}
+
+event playerDisconnected(Player:entity) {
+    if(Target:isValid() & Player == Target)
+    {
+        selfDestruct()
+        print("Bro is gone LMAO")
+    }
+}
+
+# ambient/voices/citizen_beaten1-5.wav
+event entityDamage(Victim:entity, Damage:damage) {
+    if(Victim != owner()){ exit() }
+    if(!Victim:isPlayer()){ exit() }
+    
+    #playSound()
+}
+
+event tick()
+{
+    Tick++
+    if(Tick > MaxTick)
+    {
+        Tick = 0
+        MaxTick = randint(20)
+    }
+    if(Tick){exit()}
+    
+    
+    playSound()
+    
+    if(Target:isValid())
+    {
+        TargetPos = Target:shootPos() + Target:eye() * (-50)
+        entity():setPos(TargetPos)
+    }
+    
+}
+event playerDeath(Victim:entity, Inflictor:entity, Attacker:entity) {
+    if(Victim != owner()){ exit() }
+    #playSound()
+    
+}
+#npc_alyx.no01

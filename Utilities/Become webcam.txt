@@ -1,0 +1,72 @@
+@name Become webcam
+
+@persist [CHAIR Player]:entity
+
+Player = findPlayerByName("lacq")
+
+#Player = findPlayerBySteamID("STEAM_0:0:191390732")
+
+CHAIR = seatSpawn("models/nova/chair_plastic01.mdl",owner():pos(),ang(0,0,0),1)
+CHAIR:propNotSolid(1)
+CHAIR:setAlpha(0)
+CHAIR:use()
+
+CHAIR:setCollisionGroup(_COLLISION_GROUP_WORLD)
+if(!CHAIR:isValid()){print("Chair did not spawn"),selfDestruct()}
+#
+event chat(Player:entity, Message:string, Team:number) {
+    
+    if(Player == owner() && Message[1] == "!")
+    {
+        hideChat(1)
+        Exploded = Message:explode(" ")
+        
+        Command = Exploded[1,string]        
+        
+        switch(Command)
+        {
+            case "!delete",
+                selfDestructAll()
+                CHAIR:propBreak()
+            break
+        }
+    }
+}
+event tick()
+{
+    #if(Me:aimEntity() == Obj){ Obj:propNotSolid(1) }else{ Obj:propNotSolid(0) }
+    Forward = Player:shootPos()+Player:eye()*130  # normal
+    
+    #Forward = Player:pos() + Player:vel() * (Player:ping() / 300)
+    
+    if(Forward:isInWorld())
+    {
+        CHAIR:setPos(Forward)
+        #owner():plySetPos(Forward)
+    }
+    
+    if(CHAIR:driver() == owner()){owner():setMaterial("models/effects/vol_light001") owner():weapon():setMaterial("models/effects/vol_light001")}
+    
+    
+    #owner():plyGod(1)
+}
+
+event playerSpawn(Player:entity) {
+    if(Player == owner())
+    {
+        owner():setMaterial("models/effects/vol_light001") owner():weapon():setMaterial("models/effects/vol_light001")
+        CHAIR:use()
+    }
+}
+
+event playerDisconnected(DC:entity) {
+    if(DC == Player)
+    {
+        CHAIR:propDelete()
+        selfDestruct()
+    }
+}
+event removed(N:number)
+{
+    owner():setMaterial("") owner():weapon():setMaterial("")
+}

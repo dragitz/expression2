@@ -1,0 +1,57 @@
+@name Fun/Door Hijacker
+@persist Doors:array CHAIR:entity Target:entity Position:vector Tick
+
+if(first())
+{
+    CHAIR = seatSpawn("models/nova/chair_plastic01.mdl", entity():pos()+vec(0,0,30),ang(0,0,0),1)
+    CHAIR:setAlpha(0)
+    CHAIR:setCollisionGroup(_COLLISION_GROUP_PASSABLE_DOOR)
+    
+    Position = vec(2166.643799,1447.728882,-9095.968750)
+}
+
+event keyPressed(Player:entity, Key:string, Down:number, KeyBind:string) {
+    if(Down & KeyBind == "use" )
+    {
+        if(Player:aimEntity():type() == "func_button")
+        {
+            # Tp the player
+            Me = Player
+            Forward = Me:shootPos()+Me:eye()*(-1.3)
+            CHAIR:setPos(Forward)
+    
+            Me = Player
+            Pitch = Me:eyeAngles():pitch() + 90
+            Yaw = Me:eyeAngles():yaw()
+            Roll = Me:eyeAngles():roll()
+            CHAIR:setAng(ang(Pitch,Yaw,Roll))
+        }
+        
+    }
+}
+
+event playerEnteredVehicle(Player:entity, Vehicle:entity) {
+    if(Vehicle != CHAIR){ exit() }
+
+    Target = Player
+}
+
+event tick()
+{
+    if(Target:isValid() & CHAIR:driver():isValid())
+    {
+        Tick += 1
+    }
+    
+    if(Tick >= 3)
+    {
+        CHAIR:setPos(Position)
+        CHAIR:ejectPod()
+        Target = noentity()
+        
+        Tick = 0
+        
+        CHAIR:setPos(entity():pos()+vec(0,0,10))
+        
+    }
+}

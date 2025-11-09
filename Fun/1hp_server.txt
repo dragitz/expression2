@@ -1,0 +1,73 @@
+@name 1HP Server
+@persist [Turret Target]:entity MaxHp
+
+@outputs Fire Force Damage NumBullets
+if(first())
+{
+    Turret = entity():isWeldedTo()
+    
+    if(Turret:type() != "gmod_wire_turret")
+    {
+        print("Please spawn this chip on a turret"), selfDestruct()
+    }
+    
+    Fire   = 0
+    Force = _INF
+    Damage = 0
+    
+    entity():propFreeze(1)
+    Turret:propFreeze(1)
+    
+    Turret:setAng(ang(-90,0,0))
+    
+    MaxHp = 1
+}
+
+
+event playerSpawn(Player:entity) {
+    
+    if(->Fire & ->Force & ->Damage & Player:health() > MaxHp)
+    {
+        Turret:setAlpha(0)
+        Turret:propShadow(0)
+        Turret:propNotSolid(1)
+        Turret:setCollisionGroup(_COLLISION_GROUP_WORLD)
+        
+        entity():setAlpha(0)
+        entity():propShadow(0)
+        entity():propNotSolid(1)
+        entity():setCollisionGroup(_COLLISION_GROUP_WORLD)
+        
+        
+        Target = Player
+        
+    }
+}
+
+event tick()
+{
+    #print(owner():creationTime() - curtime())
+    if(->Fire & ->Force & ->Damage)
+    {
+            
+        Damage = 0
+        Fire = 0
+        foreach(_:number, Target:entity = players())
+        {
+            # Since MaxHp is set to 1, this should deal 99, but sometimes it kills
+            if(Target:isValid() & Target:health() > MaxHp & Target:isOnGround())
+            {
+                Turret:setPos(Target:pos()+vec(0,0,10))
+                Damage = round(Target:health() - MaxHp)
+                Fire = 1
+                
+            }
+        }
+        
+    }
+
+}
+
+event removed(Resetting:number) {
+    reset()
+}

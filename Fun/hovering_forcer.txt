@@ -1,0 +1,80 @@
+@name Hovering Forcer
+
+@outputs Velocity
+@persist Forcer:entity Noclip Who:entity
+
+Velocity = 0
+Noclip = 0
+
+Who = findPlayerByName("manner")
+print(Who)
+
+Forcer = entity():isWeldedTo()
+if(!Forcer:isValid()){hint("Spawn a forcer first!",3.5), selfDestructAll()}
+
+event keyPressed(Player:entity, Key:string, Down:number, KeyBind:string) {
+    if(Player == Who & Key == "q" & Down & Player:isAlive() & !Player:inVehicle())
+    {
+        if(Noclip)
+        {
+            Noclip = 0
+            print("Fly OFF")
+        }
+        else
+        {
+            Noclip = 1
+            print("Fly ON")
+        }
+    }
+}
+
+event tick()
+{
+    if(->Velocity & !Who:isOnGround() )
+    {
+        entity():propNotSolid(1)
+        entity():setAlpha(0)
+        Forcer:propNotSolid(1)
+        Forcer:setAlpha(0)
+        
+        Pos = Who:pos()+vec(0,0,10)
+        
+        Pos = Who:pos() + Who:vel() * (5 / 1000)
+        Pos[1] = Who:pos():x()
+        Pos[2] = Who:pos():y()
+        
+        if(Pos:isInWorld())
+        {
+            Forcer:setPos(Pos)
+        }
+
+        TargetPos = Who:pos()+vec(0,0,200)
+        if(Who:keyWalk())
+        {
+            TargetPos = Who:shootPos() + Who:eye() * 300
+        }
+        Speed = Who:vel():z()
+        
+        # Detailed version
+        # Good 
+        local Difference = TargetPos-Who:pos()
+        local Distance = Difference:length()
+        local TargetVel = Difference* min(Speed/Distance, 1)
+        
+        FinalSpeed = max(0,TargetVel:length() + 4)
+        if(FinalSpeed >= 55){ FinalSpeed = (-Speed)}
+        
+        # Controls
+        Multiplier = 1
+        if(Who:keySprint()){ Multiplier = 2}
+        
+        if(Who:keyJump()){ FinalSpeed = FinalSpeed + 400 * Multiplier}
+        # Ensure to check terrain with built in ranger
+        if(Who:keyDuck()){ FinalSpeed = FinalSpeed - 400 * Multiplier}
+        
+        Velocity = FinalSpeed        
+    }
+}
+
+
+

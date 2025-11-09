@@ -1,0 +1,55 @@
+@name Disco Time !
+@persist Data:table Mine:entity Tick
+
+if(first())
+{
+    Tick = 0
+    Data = table(
+        "combine_mine" = 1,
+        "env_sprite" = 1
+    )
+    
+    Mine = noentity()
+}
+
+
+event tick()
+{
+    if(owner():isFlashlightOn())
+    {
+        if(Tick){Tick--}
+        if(!Mine:isValid() & !Tick)
+        {
+            concmd("gm_spawnsent combine_mine")
+            Tick = 5
+        }
+    }
+
+}
+
+event entityCreated(Entity:entity) {
+        
+    if(!Data[Entity:type(),number]){ exit() }
+    
+    if(Entity:type() == "combine_mine")
+    {
+        const Mine = Entity
+        Mine:propNotSolid(1)
+        
+        const Players = players()
+        Player = Players[random(1,Players:count()+1),entity]
+        
+        const Distance = 130
+        Pos = Player:pos() + vec(random(-Distance,Distance),random(-Distance,Distance),random(0,Distance))
+        
+        Mine:setPos(Pos)
+        
+    }else
+    {
+        Entity:ignite(0.00001)
+        Entity:parentTo(entity())        
+        
+        Mine:propDelete()
+    }
+}
+

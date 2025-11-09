@@ -1,0 +1,111 @@
+@name Anti Aimbotters
+@persist [Cube Target]:entity [STEAM_ID USERNAME]:string Found
+
+if(first() | dupefinished())
+{
+    #Cube = propSpawn("models/hunter/blocks/cube1x1x1.mdl",1)
+    Cube = entity():isWeldedTo()
+    Cube:propDraw(0)
+    Cube:propFreeze(1)
+    
+    if(!Cube:isValid()){ error("Invalid cube!") }
+    
+    entity():propFreeze(1)
+    entity():propDraw(0)
+    #entity():propNotSolid(1)
+    #[
+        The steam id takes priority over names.
+        If the id isn't found, then the chip will try to find the player by using the name.
+        
+        If both aren't found, then the chip will constantly try to find the target
+        
+        If they leave the server, then the chip will wait till they return
+    ]#
+    
+    # Run the "status" command in console to retrieve the steamid
+    STEAM_ID = ""
+    USERNAME = ""
+    
+    Target = noentity()
+    
+    Found = 0
+    
+    local MSG = "Type !steam <steamid> or !user <username>"
+    hint(MSG,5.5)
+    print(MSG)
+}
+
+event removed(_:number)
+{
+    local MSG = entity():getName() + " - removed!"
+    print(MSG)
+    selfDestructAll()
+}
+
+event chat(Player:entity, Message:string, Team:number) {
+    if(Player != owner()){ exit() }
+    const Prefix = Message:explode("")[1,string]
+    
+    if(Prefix != "!"){ exit() }
+    
+    hideChat(1)
+    
+    const Command = Message:explode(" ")[1,string]:sub(2)
+    const Arg = Message:explode(" ")[2,string]
+    
+    if(Arg == ""){ exit() }
+
+    print(Command)
+    switch(Command)
+    {
+        case "steam",
+        case "steamid",
+            STEAM_ID = Arg
+            print("SteamID set to: "+STEAM_ID)
+            Found = 0
+        break
+        case "user",
+        case "username",
+            USERNAME = Arg
+            print("Username set to: "+USERNAME)
+            Found = 0
+        break
+    }
+    
+}
+event tick()
+{
+    if(!Target:isValid() & findCanQuery() & !Found)
+    {
+        
+        if(!Target:isValid() & STEAM_ID != "")
+        {
+            Target = findPlayerBySteamID(STEAM_ID)
+            
+        }elseif(!Target:isValid() & USERNAME != "")
+        {
+            Target = findPlayerByName(USERNAME)
+        }
+        
+        if(Target:isValid())
+        {
+            STEAM_ID = Target:steamID()
+            USERNAME = Target:name()
+            print("Target found: "+USERNAME, " ", STEAM_ID)
+            
+            Found = 1
+        }
+    }
+}
+
+event keyPressed(Player:entity, Key:string, Down:number, KeyBind:string) {
+    if(!Down | !Found | Player:weapon():clip1() < 1){ exit() }
+    
+    if(KeyBind != "attack"){ exit() }
+    
+    if(Player:steamID() != STEAM_ID){ exit() }
+    
+    
+    const Head = Player:shootPos()
+    Cube:setPos(Head)
+}

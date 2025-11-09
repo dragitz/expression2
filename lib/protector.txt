@@ -1,0 +1,69 @@
+@persist Protector:gtable Friend:entity
+
+if(first() | dupefinished())
+{
+    entity():setAlpha(0)
+    #entity():propNotSolid(1)
+    
+    if(Protector:count() == 0)
+    {
+        Protector = gTable("protector",0)
+    }
+    
+    if(Protector:count() > 1)
+    {
+        Friend = Protector[Protector:count() - 1,entity]
+        if(Friend:isValid())
+        {
+            entity():parentTo(Friend)
+        }
+        
+        
+    }else
+    {
+        Friend = entity()
+        
+    }
+        
+    Protector[Protector:count(),entity] = entity()
+}
+    event removed(_:number)
+    {
+        gRemoveAll()
+        selfDestructAll()
+    }
+    
+    event tick()
+    {
+        try{
+            if(perf() && Friend:isValid())
+            {
+                # Force new attach
+                if(Protector[0,entity] == entity() && Protector:count() > 1 && Friend != Protector[Protector:count() - 1,entity] && Protector[Protector:count() - 1,entity] != entity())
+                {
+                    entity():deparent()
+                    Friend = Protector[Protector:count() - 1,entity]
+                    entity():parentTo(Friend)
+                }
+                
+                # Friend check
+                if(Friend:getColor() == vec(255,0,0) || !Protector[0,entity]:isValid())
+                {
+                    gRemoveAll()
+                    selfDestructAll()
+                    Friend:propDelete()
+                    Friend:propBreak()
+                    
+                }
+            }
+        }catch(E)
+        {
+            gRemoveAll()
+            selfDestructAll()
+        }
+    }
+
+
+
+
+

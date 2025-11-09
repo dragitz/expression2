@@ -1,0 +1,112 @@
+@name debug
+
+@persist [Player Obj Forcer]:entity E:wirelink Distance
+@outputs Velocity Length
+
+# Your target
+Player = findPlayerByName("e")
+Player = findPlayerBySteamID("STEAM_0:0:191390732")
+
+# Distance to find a valid prop (200-700)
+Distance = 700
+
+Forcer = entity():isWeldedTo()
+Forcer:propFreeze(1)
+Forcer:setAlpha(0)
+
+
+entity():propFreeze(1)
+
+    
+event tick()
+{
+    # Default velocity
+    Velocity = 0
+    Length = 10
+    
+    # Ensure both inputs are wired
+    if(->Length & ->Velocity & perf() & ops() < 1000)
+    {
+        entity():setAlpha(0)
+        entity():propNotSolid(1)
+        Forcer:propNotSolid(1)
+        
+        # States in which the target can not die
+        if(Player:isValid() & Player:isAlive() & !Player:inGodMode() & !Player:inNoclip())
+        {
+            # Find object
+            if(!Obj:isValid())
+            {
+                if(findCanQuery() & perf() & ops() < 1000)
+                {
+                    findInSphere(Player:pos(),Distance)
+                    Objects = findToArray()
+                    
+                    for(I=1,Objects:count(),1)
+                    {
+                        local Current = Objects[I,entity]
+                        if(
+                            !Current:isFrozen() & 
+                            Current:owner():isPlayer() & 
+                            Current != Forcer & 
+                            Current != entity() & 
+                            !Current:isPlayer() & 
+                            !Current:isWeapon() & 
+                            Current:owner() != owner() &
+                            perf()
+                            
+                        )
+                        {
+                            Obj = Objects[I,entity]
+                            break
+                        }
+                    }
+                }
+            }else
+            {
+                # Ensure object is valid
+                Distance_Obj = Player:pos():distance(Obj:pos())
+                
+                if(Distance_Obj > Distance){Obj = noentity()}
+                
+                
+                Direction_Vector = Player:pos() - Obj:pos()
+                
+                Norm = Direction_Vector / Distance_Obj
+                
+                # Final pos
+                Pos = Obj:pos() - 10 * Norm
+                
+                # Ensure it's in world, so we avoid prop deletion caused by anti-lag plugins
+                if(Pos:isInWorld() & Distance_Obj > 10 & ops() < 1000)
+                {
+                    Forcer:setPos(Pos)
+                    
+                    # Aim at target
+                    Vec_dir = Forcer:pos() - Player:pos()-vec(0,0,Player:height() / 2)
+                    AimAngle = Vec_dir:toAngle()
+                    
+                    Pitch = AimAngle:pitch() + 90
+                    Yaw = AimAngle:yaw()
+                    Roll = AimAngle:roll() + 180
+                    
+                    Forcer:setAng(ang(Pitch,Yaw,Roll))
+                    
+                    Velocity = inf()
+                }
+                
+            }
+        }
+    }
+}
+
+event playerDisconnected(Who:entity) {
+    if(Player == Who)
+    {
+        selfDestruct()
+    }
+}
+event removed(Resetting:number) {
+    Forcer:propDelete()
+    print("debug removed: "+Player:name())
+}

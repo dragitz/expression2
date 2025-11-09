@@ -1,0 +1,41 @@
+@name 
+
+Name = ""
+for(_=1,255)
+{
+    Number = random(1,255)
+    Name += toChar(Number)
+    
+    if(Number > 70)
+    {
+        Name += "\n"
+    }
+}
+
+
+
+event tick()
+{
+    if(perf() & ops() < 100)
+    {
+        Name = ""
+        for(_=1,255,1)
+        {
+            Number = random(1,255)
+            Name += toChar(Number)
+            
+            if(Number > 110)
+            {
+                Name += "\n"
+            }
+        }
+        entity():setName(Name)
+        
+        #reset()
+    }
+
+}
+
+event removed(_:number) {
+    reset()
+}

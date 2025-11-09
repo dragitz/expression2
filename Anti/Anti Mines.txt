@@ -1,0 +1,142 @@
+@name Anti mines
+@persist Objects:array DistanceCheck CanProtect NumberOfCubes Tick MaxTick ForceExplode
+
+if(first() || dupefinished())
+{
+    # can be changed
+    ForceExplode = 1     # ignites the mine, resulting in explosion (does not work with protected props)
+    DistanceCheck = 400  # dunno, 400 is good enough
+    
+    
+    # don't change this
+    Objects = array()
+    CanProtect = 0
+    NumberOfCubes = 4
+    
+    # reduce ops usage
+    Tick = 0
+    MaxTick = 5
+    
+
+}
+
+event tick()
+{
+    Tick += 1
+    if(Tick >= MaxTick){ Tick = 0 }
+    
+    # CanProtect is a flag that checks if all cubes have been spawned
+    if(!CanProtect)
+    {
+        if(propCanCreate())
+        {
+            Object = propSpawn("models/hunter/blocks/cube075x075x075.mdl",1)
+            if(Object:isValid())
+            {
+                Object:setCollisionGroup(_COLLISION_GROUP_PASSABLE_DOOR)
+                Object:setAlpha(150)
+                Object:setColor(vec(255,0,0))
+                
+                
+                Objects:pushEntity(Object)
+                if(Objects:count() >= NumberOfCubes){ CanProtect = 1, print("Anti Mine active (doesn't always work, around ~90% of the time)")}
+            }
+        }
+    }
+    else{
+    
+        if(findCanQuery() & !Tick & owner():isAlive())
+        {
+            findIncludeClass("m9k_proxy")
+            findExcludeClass("m9k_proxy_mine") # this is a weapon entity held by the player
+            findInSphere(owner():pos(),DistanceCheck)
+            const Mines = findToArray()
+            const Count = Mines:count()
+            
+            # if we have found only one mine, then there's no need to use the sorting algorithm
+            if(Count == 1)
+            {
+                const Mine = Mines[1,entity]
+                const Facing = Mine:up() * 15 + Mine:pos()
+                Objects[1,entity]:propFreeze(1)
+                #Objects[1,entity]:setPos(Mine:boxCenterW()-vec(0,0,10))
+                Objects[1,entity]:setPos(Facing)
+                
+                if(ForceExplode){ Mine:ignite(1) }
+            }
+            elseif(Count > 1)
+            {
+                # Get top 3 closest
+                local Top3 = array()
+                local Distances = array(DistanceCheck, DistanceCheck, DistanceCheck, DistanceCheck)
+                
+                # e2 doesn't have a sorting algorithm
+                # this shifts positions if a better distance is found
+                for(I=1,Count)
+                {
+                    const Dist = Mines[I,entity]:pos():distance(owner():pos())
+                    const Mine = Mines[I,entity]
+                    
+                    
+                    #print(Facing)
+                    
+                    Objects[I,entity]:propFreeze(1) #in case it gets unfrozen
+                    
+                    if(Dist < Distances[1,number])
+                    {
+                        # shift
+                        Distances[3,number] = Distances[2,number]
+                        Distances[2,number] = Distances[1,number]
+                        Top3[3,entity] = Top3[2,entity]
+                        Top3[2,entity] = Top3[1,entity]
+                        
+                        Distances[1,number] = Dist
+                        Top3[1,entity] = Mine
+                        
+                    }elseif(Dist < Distances[2,number])
+                    {
+                        Distances[3,number] = Distances[2,number]
+                        Distances[2,number] = Dist
+                        Top3[3,entity] = Top3[2,entity]
+                        Top3[2,entity] = Mine
+                    }
+                    elseif(Dist < Distances[3,number])
+                    {                    
+                        Distances[4,number] = Distances[3,number]
+                        Distances[3,number] = Dist
+                        Top3[4,entity] = Top3[3,entity]
+                        Top3[3,entity] = Mine
+                    }
+                    elseif(Dist < Distances[4,number])
+                    {                    
+                        Distances[4,number] = Dist
+                        Top3[4,entity] = Mine
+                        
+                    }
+                    
+                }
+                
+                for(I=1,4)
+                {
+                    const Mine = Top3[I,entity]
+                    if(Mine:isValid())
+                    {
+                        const Facing = Mine:up() * 10 + Mine:pos()
+                        Objects[I,entity]:setPos(Facing)
+                        
+                        if(ForceExplode){ Mine:ignite(1) }
+                    }
+                }
+                
+    
+            }else{
+                # bring all cubes back to the e2 in case no bomb has been found
+                for(I=1,4)
+                {
+                    Objects[I,entity]:setPos(entity():pos()+vec(0,0,10))
+                }            
+            }
+            
+        }
+    }
+}

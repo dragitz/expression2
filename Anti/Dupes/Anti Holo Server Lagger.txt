@@ -1,0 +1,128 @@
+@name Anti Holo Server Lagger
+@persist [Triggers TrackedEnts TrackedCubes]:table
+
+#[
+    people can bypass detection, by using an e2 that slowly spawns and automatically wires everything
+    or altering the hash in some way
+    can't fix that (not yet)
+    
+    this e2 is meant to prevent dupe abuse from users who don't know how to make a lagger on their own
+]#
+
+if(first() | duped())
+{
+    propSpawnUndo(0)
+    
+    Triggers = table(
+        "gmod_wire_value" = 1,
+        "duplicator" = 1
+    )
+    TrackedEnts = table()
+    TrackedCubes = table()
+    
+    function array bubbleSort(Arr:array)
+    {
+        local Ordered = array()
+        local Count = Arr:count()
+    
+        for (I = 1, Count)
+        {
+            Ordered[I,entity] = Arr[I,entity]
+        }
+        for (I = 1, Count)
+        {
+            for (J = 1, Count - I)
+            {
+                local TypeA = Ordered[J, entity]:type()
+                local TypeB = Ordered[J + 1, entity]:type()
+                
+                if (TypeA > TypeB)
+                {
+                    local Temp = Ordered[J,entity]
+                    Ordered[J] = Ordered[J + 1,entity]
+                    Ordered[J + 1] = Temp
+                }
+            }
+        }
+    
+        return Ordered
+    }
+    
+    timer("check",1000)
+}
+
+
+
+event entityCreated(Entity:entity) {
+    
+    # Prevent chip crash, also test if owner is holding the dupe tool
+    if(!Triggers[Entity:type(),number]){ exit() }
+    if(!Triggers[Entity:owner():tool(),number]){ exit() }
+    
+    # still not fully sure how getConnectedEntities works, but this does the job
+    const ConnectedEntities = Entity:getConnectedEntities("weld")
+    
+    # Dube size should be 14
+    if(ConnectedEntities:count() != 14){ exit() }
+        
+    local Cube  = noentity()
+    const OrderedList = bubbleSort(ConnectedEntities)
+    local Str  = ""
+    
+    for(I=1,OrderedList:count())
+    {
+        Type = OrderedList[I,entity]:type()
+        Str += Type
+        
+        if(Type == "prop_physics"){ Cube = OrderedList[I,entity]  }
+    }
+    const Hash = hash(Str)
+    
+    # bubble sort hash should be 1265896113
+    if(Hash != 1265896113){ print("Hash does not match: "+Entity:owner():name()), exit() }
+    
+    
+    const Temp = propSpawn("models/hunter/blocks/cube05x05x05.mdl",Cube:pos(),Cube:angles(),1)
+    Temp:setCollisionGroup(_COLLISION_GROUP_PASSABLE_DOOR)
+    Temp:setAlpha(0)
+    
+    if(!Temp:isValid()){ print("Failed to prevent holo lagger spawned by: "+Cube:owner():name()), exit() }
+    
+    # Add dupe and temp cube to tracked entities
+    TrackedEnts:pushEntity(Cube)
+    TrackedCubes[TrackedEnts:count(),entity] = Temp
+    
+    print(Cube:owner():name(), " spawned a Holo lagger")
+}
+
+
+# No need to use event tick, timer works fine
+if(clk("check"))
+{
+    for(I=1,TrackedEnts:count())
+    {
+        local Ent = TrackedEnts[I,entity]
+        if(!Ent:isValid())
+        {
+            TrackedCubes[I,entity]:propDelete()
+            TrackedCubes:remove(I)
+            TrackedEnts:remove(I)
+            
+            # print("dupe removed by player")
+        }
+    }
+    
+    timer("check",1000)
+}
+
+event removed(Resetting:number) {reset()}
+
+
+
+
+
+
+
+
+
+

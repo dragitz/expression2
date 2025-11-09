@@ -1,0 +1,17 @@
+@name Suicide
+@persist Target:entity
+
+Target = findPlayerByName("duke")
+
+if(!Target:isValid()){ print("Target isn't valid!"), selfDestruct()}
+
+event playerDeath(Victim:entity, Inflictor:entity, Attacker:entity) {
+    
+    if(Victim == Target & owner():isAlive())
+    {
+        #concmd("kill")
+        
+        Ent=propSpawn("models/props_phx/cannonball_solid.mdl",owner():pos(),ang(0,0,0),0)
+        Ent:propBreak()
+    }
+}

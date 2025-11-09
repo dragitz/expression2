@@ -1,0 +1,7 @@
+@name dies of cringe
+event playerDeath(Victim:entity, Inflictor:entity, Attacker:entity) {
+    if(Victim == owner())
+    {
+        concmd("say *dies of cringe*")
+    }
+}

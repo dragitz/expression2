@@ -1,0 +1,338 @@
+@name Anti Killer be killed+
+@persist [Data People Turrets]:table [Prop CHAIR Cube]:entity OriginalPosition:vector
+@persist AtRisk TotalTurrets RespawnAmount MinRespawnAmount
+@persist CachedName:string
+@persist [LastRevenger LastKiller]:entity
+@persist EXTRA PITCH HEIGHT
+
+#@model models/hunter/blocks/cube4x4x05.mdl
+@model models/props_phx/construct/metal_dome360.mdl
+
+#[
+    Coded by: BIG MANNERS
+    Steam id: STEAM_0:0:87011489
+
+    Please leave credits if you add this to your dupes :) thanks!
+]#
+
+if(first() | dupefinished())
+{
+    PITCH = 360
+    EXTRA = 0
+    
+    HEIGHT = 39
+    
+    entity():setAng(ang(PITCH,0,EXTRA))
+    
+    AtRisk = 0
+    RespawnAmount = 0
+    
+    # I have no idea why, but on dedicated it seems to act differently
+    # and MinRespawnAmount should be set to 1
+    # (unless a future update happens that fixes that)
+    MinRespawnAmount = isSinglePlayer() * 2 + isDedicated() + isLan() * 2
+    
+
+    TotalTurrets = 0
+    OriginalPosition = entity():pos() # <-- fallback
+    
+    Data = table(
+        "gmod_wire_expression2" = 1,
+        #"killer be killed (Turret+Prop Core)" = 1, # need to work on that
+        "killer be killed" = 1,
+        "D.I.G Murderer Gets Murdered" = 1
+        
+    )
+    
+    People = table()
+    Turrets = table()
+    
+    Prop = entity()
+    Prop:propFreeze(1)
+    Prop:propShadow(0)
+    Prop:setAlpha(150)
+    Prop:setCollisionGroup(_COLLISION_GROUP_PASSABLE_DOOR)
+
+    CHAIR = seatSpawn("models/nova/chair_plastic01.mdl", entity():pos()+vec(0,0,30),ang(180,0,0),1)
+    CHAIR:propFreeze(1)
+    CHAIR:propShadow(0)
+    CHAIR:setAlpha(0)
+    CHAIR:propNotSolid(1)
+    CHAIR:setCollisionGroup(_COLLISION_GROUP_PASSABLE_DOOR)
+        
+    LastKiller = noentity()   # who killed the revenger
+    LastRevenger = noentity() # the owner of the turret
+    
+    findByClass("gmod_wire_expression2")
+    local Arr = findToArray()
+    for(Q=1,Arr:count())
+    {
+        const Entity = Arr[Q,entity]
+        
+        #if(Entity:owner() == owner()){ continue }
+        #print(Entity:getName())
+        
+        if(!Data[Entity:getName(),number]){ continue }
+        
+        local Turret = noentity()
+        const Ents = Entity:getConnectedEntities("")
+        for(I=1,Ents:count())
+        {
+            if(Ents[I,entity]:type() == "gmod_wire_turret"){ Turret = Ents[I,entity], break}
+        }
+        if(!Turret:isValid()){ continue } # invalid
+        
+        # slot
+        if(!Turrets[Turret:owner():steamID64(),table])
+        {
+            # entity id may not be the best, but tick will remove it from the list, so should be fine
+            Turrets[Turret:id(),number] = 1
+            People[Turret:owner():steamID64(),number] = 1
+            
+        }
+        People[Turret:owner():steamID64(),table]:pushEntity(Turret)
+
+        
+        print("Detected spawned \"killer be killed\" by: "+Turret:owner():name())
+    }
+    
+    CachedName = entity():getName()
+    
+    Cube = propSpawn("models/hunter/blocks/cube075x075x075.mdl",entity():pos()+vec(0,0,20),1)
+
+    if(!Cube:isValid()){ print("E2 didn't spawn cube. Please place this E2 again") }else{ print("E2 properly spawned")}
+    
+    Cube:setMass(10000)
+    Cube:setAlpha(0)
+    Cube:propShadow(0)
+    Cube:setCollisionGroup(_COLLISION_GROUP_PASSABLE_DOOR)    
+}
+
+
+event tick()
+{
+
+    #debug
+    #Prop:setPos(owner():pos()+vec(0,0,owner():height()+10*owner():isOnGround()))
+    #Prop:setAng(ang(180,owner():angles():yaw()+90,0))
+
+    
+    CHAIR:setAng(ang(180,0,0))
+    
+    if(AtRisk & CHAIR:driver() != owner())
+    {
+        
+        #if(LastKiller:isCrouch()){ SetHeight = HEIGHT_CROUCH }
+        
+        const SetHeight = LastKiller:attachmentPos("eyes"):z() - LastKiller:pos():z() - HEIGHT
+        
+        Prop:setPos(LastKiller:pos()+vec(0,0,SetHeight))
+        Prop:setAng(ang(PITCH,LastKiller:angles():yaw()+90,EXTRA))
+    }
+
+    if(!AtRisk & CHAIR:driver():isPlayer() & RespawnAmount >= MinRespawnAmount)
+    {
+        #CHAIR:printDriver("Congrats! ")
+        CHAIR:printDriver(_HUD_PRINTCENTER,
+            LastRevenger:name() + " got gotted by\n\n
+            Anti Killer be killed+"
+        )
+        CHAIR:setPos(OriginalPosition)
+        CHAIR:ejectPod()
+
+        RespawnAmount = 0
+    }
+
+        # Always TP the invisible chair under the revenger's feet
+        CHAIR:setPos(LastRevenger:pos() + vec(0, 0, 0))
+        
+        # Remove invalid turrets
+        local Keys = Turrets:keys()
+        for(I=1,Keys:count())
+        {
+            const ID = Keys[I,number]
+            if(!entity(ID):isValid()){ Turrets:unset(ID), continue }
+        }
+        
+        # Unset turret owners if there are no owned turrets by them
+        TotalTurrets = 0
+        People = table()
+        Keys = Turrets:keys()
+        local TurretList = array()
+        for(I=1,Keys:count())
+        {
+            const ID = Keys[I,number]
+            const Entity = entity(ID)
+            const Steam = Entity:owner():steamID64()
+            People[Steam,number] = 1
+            
+            TurretList:pushEntity(Entity)
+            TotalTurrets += 1
+        }
+        
+        
+        # simple reset
+        if(!TotalTurrets){ AtRisk = 0 }
+        else
+        {
+            # advanced reset
+            if(AtRisk & findCanQuery())
+            {
+                local Found = 0
+                for(I=1,TurretList:count())
+                {
+                    const Turr = TurretList[I,entity]
+                    const D = Turr:pos():distance(LastKiller:pos())
+                    if(D < 130){Found += 1}
+                }
+                if(!Found){ AtRisk -= 1}
+            }
+        }
+        
+
+        if(AtRisk)
+        {
+            CachedName = "Anti Killer be killed+ \n\n Protecting: "+LastKiller:name()+"\n\n"
+            CachedName += "--> Press E (or your USE button) <--- \n\n\n"
+            CachedName += LastRevenger:name()+" is trying to kill you!\n"
+        }else{
+
+            CachedName = "Anti Killer be killed+"
+        }
+        if(CachedName != entity():getName()){ entity():setName(CachedName) }
+    
+}
+
+event entityCreated(Entity:entity) {
+    if(!Data[Entity:type(),number]){ exit() }    
+    if(!Data[Entity:getName(),number]){ exit() }
+    
+    # Add turret to list of turrets
+    local Turret = noentity()
+    const Ents = Entity:getConnectedEntities("")
+    for(I=1,Ents:count())
+    {
+        if(Ents[I,entity]:type() == "gmod_wire_turret"){ Turret = Ents[I,entity], break}
+    }
+    
+    # not an auto revenge e2 but still has the same name?
+    if(!Turret:isValid())
+    {
+        print("Invalid turret? owner: "+Entity:owner():name())
+        exit()
+    }
+    
+    # Create slot
+    # turret is valid, add it to the group of tracked turrets
+    if(!Turrets[Turret:owner():steamID64(),table])
+    {
+        # entity id may not be the best, but tick will remove it from the list, so should be fine
+        Turrets[Turret:id(),number] = 1
+        People[Turret:owner():steamID64(),number] = 1
+    }
+    
+    
+    People[Entity:owner():steamID64(),table]:pushEntity(Turret)
+    #const Keys = People[Entity:owner():steamID64(),table]:keys()
+    
+    print("Player: " + Entity:owner():name() + " spawned an auto revenge")
+
+}
+
+event playerDeath(Victim:entity, Inflictor:entity, Attacker:entity) {
+    if(!People[Victim:steamID64(),number]){ exit() }
+    
+    # not protecting people who have the revenge turret
+    if(People[Attacker:steamID64(),number]){ exit() }
+    
+    
+    #print(Inflictor, Inflictor:owner())
+    if(Inflictor:type() == "prop_physics" & Inflictor:owner() == Victim & CHAIR:driver():isPlayer())
+    { 
+        RespawnAmount += 1
+        CHAIR:printDriver(_HUD_PRINTCENTER,"Please wait.. \n\nOne more death till you are safe again!\n\n If you feel safe, you can exit the vehicle!")
+    }
+
+    # i don't want to code something that detects kills based on props, only players
+    if(!Attacker:isPlayer()){ exit() }
+    
+    LastKiller = Attacker
+    LastRevenger = Victim
+    
+    # Prop that protects the player from being revenge killed
+    
+    const SetHeight = LastKiller:attachmentPos("eyes"):z() - LastKiller:pos():z() - HEIGHT
+    Prop:setPos(LastKiller:pos()+vec(0,0,SetHeight))
+    Prop:setAng(ang(PITCH,LastKiller:angles():yaw()+90,EXTRA))
+    
+    AtRisk = 3
+    
+    OriginalPosition = LastKiller:pos()
+}
+event playerSpawn(Player:entity) {
+    
+    if(!People[Player:steamID64(),number]){ exit() }
+    
+    # automatically use chair if owner
+    #if(LastKiller == owner() & AtRisk){ CHAIR:use() }
+}
+
+event playerEnteredVehicle(Player:entity, Vehicle:entity) {
+    Cube:setPos(owner():pos()+vec(0,0,10))
+    
+    if(Vehicle != CHAIR){ exit() }
+    CHAIR:setPos(LastRevenger:pos() + vec(0, 0, 0))
+    
+    CHAIR:setAng(ang(180,0,0))
+    CHAIR:printDriver(_HUD_PRINTCENTER,
+        "\nPlease wait..
+        You will be automatically teleported back when you are safe !"
+    )
+
+}
+
+
+
+
+event keyPressed(Player:entity, Key:string, Down:number, KeyBind:string) {
+
+    if(!AtRisk | Player != LastKiller | KeyBind != "use"){ exit() }
+
+    if(!Down || Player:inVehicle()){ CHAIR:propNotSolid(1), exit() }
+    if(Player:aimEntity() != entity()){ exit() }
+    
+    
+    CHAIR:propNotSolid(0)
+    
+    Me = Player
+    Forward = Me:shootPos()+Me:eye()*(-1.1)
+    CHAIR:setPos(Forward)
+
+    Pitch = Me:eyeAngles():pitch() + 90
+    Yaw = Me:eyeAngles():yaw()
+    Roll = Me:eyeAngles():roll()
+    CHAIR:setAng(ang(Pitch,Yaw,Roll))
+}
+
+event removed(Resetting:number) {
+    propDeleteAll()
+}
+
+#[
+    Coded by: BIG MANNERS
+    Steam id: STEAM_0:0:87011489
+
+    Please leave credits if you add this to your dupes :) thanks!
+]#
+
+#[
+
+Entity [197][gmod_wire_turret]
+Entity [198][gmod_wire_expression2]
+Entity [0][phys_constraintsystem]
+Entity [199][phys_spring]
+Entity [200][keyframe_rope]
+Entity [0][phys_slideconstraint]
+Entity [201][gmod_winch_controller]
+
+]#

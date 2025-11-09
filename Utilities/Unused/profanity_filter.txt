@@ -1,0 +1,64 @@
+@name Konichiwa
+@persist ProfanityList:table
+
+if(first())
+{
+    ProfanityList = table(
+        "negro" = 1,
+        "nig" = 1,
+        "nigg" = 1,
+        "nigga" = 1,
+        "niggah" = 1,
+        "niggas" = 1,
+        "niggaz" = 1,
+        "nigger" = 1,
+        "niggers" = 1,
+        "niggle" = 1,
+        "niglet" = 1,
+        "gay" = 1,
+        "fag" = 1,
+        "fagg" = 1,
+        "faggot" = 1,
+        "kys" = 1
+    )
+
+}
+event chat(Player:entity, Message:string, _:number) {
+    
+    if(!Player:isAlive() || !Player:isValid()){ exit() }
+    
+    const Array = Message:explode(" ")
+    for(I=1, Array:count())
+    {
+        if(ProfanityList:exists(Array[I,string]))
+        {
+            Ent=propSpawn("models/props_phx/cannonball_solid.mdl",Player:pos(),ang(0,0,0),0)
+            Ent:propBreak()   
+        }
+    }
+    
+        
+}
+
+event removed(_:number) {reset()}
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

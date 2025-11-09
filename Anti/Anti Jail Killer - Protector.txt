@@ -1,0 +1,209 @@
+@name Anti Jail Killer - protector
+@persist [Cube Target CHAIR]:entity
+@persist [People BlackListedProps BannedE2 Victims]:table [TrueAttacker TrueProp]:entity
+
+if(first())
+{
+    BlackListedProps = table(
+        "gmod_wire_expression2" = 1
+    )
+    
+    People = table()
+    
+    Victims = table()
+    BannedE2 = table(
+        "Jail with EGP" = 1,
+        "[Kabrit_Zuck] > SpawnKill" = 1
+    )
+    
+    # Find already spawned Jails
+    findByClass("gmod_wire_expression2")
+    local Array = findToArray()
+    for(I=1,Array:count())
+    {
+        if(Array[I,entity]:getName() == "Jail with EGP")
+        {
+            local Who = Array[I,entity]:owner()
+
+            local SteamID = Who:steamID()
+            People[SteamID,entity] = Array[I,entity]
+            print("Found jail: "+Who:name())
+        }
+    }
+    
+    Cube = propSpawn("models/hunter/blocks/cube2x2x2.mdl",entity():pos()+vec(0,0,10),ang(0,0,0),1)
+    Cube:setAlpha(0)
+    
+    CHAIR = seatSpawn("models/nova/chair_plastic01.mdl", entity():pos()+vec(0,0,30),ang(180,0,0),1)
+}
+
+
+
+
+
+
+
+
+event entityCreated(Entity:entity) {
+    # Thank you DeltaMolfar for telling me how to use a lookup table to avoid chip crashes
+    if( !BlackListedProps[Entity:type(), number] ){ exit() }
+    
+    local Name = Entity:getName()
+    #print(Name)
+    if( !BannedE2[Name, number] ){ exit() }
+    
+    local Who = Entity:owner()
+    
+    const SteamID = Who:steamID()
+    People[SteamID,entity] = Entity
+    
+    print(Who:name() + " spawned a Jail")
+}
+
+#[
+    1) Detect "Jail with EGP" and its owner
+    2) Detect who's the potential victim
+        * Upon player's death, check if a specific prop is near them
+        * To ensure they are the victim, let them die at least twice
+        * If the result is the same, then assume they are being targeted with the Jailer and place a protection
+    3) Upon placing the protector cube, spawn the chair
+    4) When victim enters the chair in front of them, they get teleported to the owner of the jailer
+    5) Check if the Jail is still present:
+        * If true, repeat
+        * If false, remove both cube and chair from player
+
+]#
+
+Target = noentity()
+
+
+
+event playerDeath(Victim:entity, Inflictor:entity, Attacker:entity) {
+    
+    if(Inflictor:type() == "gmod_wire_simple_explosive" & !Target:isValid())
+    {
+
+        if(findCanQuery())
+        {
+            findIncludeClass("gmod_wire_teleporter")
+            findInSphere(Victim:pos(),11)
+            
+            Array = findToArray()
+            
+            # gmod_wire_simple_explosive   9.4170999526978
+            # gmod_wire_teleporter         2.9998199939728
+
+            for(I=1,Array:count())
+            {
+                local Distance = Victim:pos():distance(Array[I,entity]:pos())
+                local SteamIDAttacker = Array[I,entity]:owner():steamID()
+                
+                
+                #print(Array[I,entity]:type() + "   Distance: " + Distance) #debug
+                # Ensure teleporter is found within a specific range
+                if(Distance <= 11 & People[SteamIDAttacker,entity])
+                {
+                    
+                    local SteamID = Victim:steamID()
+                    
+                    # Increase victim score
+                    if(!Victims[SteamID,number])
+                    {
+                        Victims[SteamID,number] = 1
+                    }else
+                    {
+                        Victims[SteamID,number] = Victims[SteamID,number] + 1
+                    }
+                    
+                    # Detect victim
+                    if(Victims[SteamID,number] > 1)
+                    {
+                        Target = Victim
+                        TrueAttacker = Array[I,entity]:owner()
+                        #TrueAttacker = findPlayerByName("bot")  #debug
+                        
+                        TrueProp = Array[I,entity]
+                        print(Victim:name()+ " has been targeted by Jailer: " + Array[I,entity]:owner():name())
+                        if(Target != Victim)
+                        {
+                            concmd("say "+Victim:name()+ " you have been targeted by a Wire Jail, owner name: "+TrueAttacker:name()+". Press E on the chair to reverse kill the Jailer. -- If you have a respawner, remove it or it won't work.")
+                        }
+                    }
+                }
+            }
+
+        }
+    }
+    
+}
+event tick()
+{
+    
+    
+    # Check if Jail has been removed
+    if(!TrueProp:isValid())
+    {
+        Victims[Target:steamID(),number] = 0
+        
+        Target = noentity()
+        TrueProp = noentity()
+        TrueAttacker = noentity()
+    }
+    if(CHAIR:driver():isPlayer() & !TrueAttacker:isValid()){CHAIR:ejectPod(), CHAIR:propNotSolid(1), CHAIR:setAlpha(0)}
+    
+    # Check if there's a jail currently targeting someone
+    if(Target:isValid())
+    {
+        # Code
+        if(CHAIR:driver() == Target)
+        {
+            #CHAIR:setPos(Void)
+            CHAIR:propNotSolid(1)
+            CHAIR:setAlpha(0)
+            CHAIR:setAng(ang(180,0,0)) # This will put the victim enough under the map so it should be protected most of the time
+            CHAIR:setPos(TrueAttacker:pos()+vec(0,0,30))
+        }
+        else
+        {
+            Cube:propNotSolid(0)
+            Cube:setPos(Target:pos()+vec(0,0,10))
+            
+            # Ensure owner of jail can be killed
+            if(!TrueAttacker:pos():isInWorld())
+            {
+                CHAIR:propNotSolid(1)
+                CHAIR:setAlpha(0)
+            }else
+            {
+                CHAIR:propNotSolid(0)
+                CHAIR:setAlpha(255)                
+            }
+            
+            # Rotate
+            Forward = Target:shootPos()+Target:eye()*10
+            
+            Pitch = Target:eyeAngles():pitch() + 90
+            Yaw = Target:eyeAngles():yaw()
+            Roll = Target:eyeAngles():roll()
+            
+            CHAIR:setAng(ang(Pitch,Yaw,Roll))        
+            CHAIR:setPos(Forward)
+            
+            
+        }
+        
+    }else
+    {
+        Cube:propNotSolid(1)
+        CHAIR:propNotSolid(1)
+        CHAIR:setAlpha(0)
+    }
+    
+    if(!Cube:isValid() | !CHAIR:isValid()){selfDestructAll()}
+}
+
+
+event removed(Resetting:number) {
+    propDeleteAll()
+    print("Anti Jail Killer (protector) -- REMOVED")
+}

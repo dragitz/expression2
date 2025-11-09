@@ -1,0 +1,117 @@
+@name Anti Big Prop Spam
+
+@persist [Cube1 Cube2 Cube3 Cube4]:entity Target:entity Model:string Close Last:entity
+@persist Blacklist:table MapCubes:array
+
+# Note: this e2 isn't finished
+
+# Distance of 200 is limit
+#[
+    200 = too much
+    170 = nope
+    180 = does it, but takes time
+    190 = kinda quick
+    195 = kinda quick
+
+]#
+#[
+    This E2 works by using an already integrated server anti-crash that checks for too many prop collisions
+    
+    
+    Without one this E2 does nothing.
+    
+    
+    In short we try to force the collision check by the addon
+]#
+
+if(first())
+{
+    Blacklist = table(
+        "models/hunter/blocks/cube8x8x8.mdl" = 1,
+        "models/props_phx/huge/evildisc_corp.mdl" = 1
+    )
+    
+    findByModel("models/hunter/blocks/cube8x8x8.mdl")
+    MapCubes = findToArray()
+    print("Count: "+MapCubes:count())
+
+}
+event entityCreated(Entity:entity) {
+    if(!Blacklist[Entity:model(),number]){ exit()}
+    
+    if(Last != Target){ Close = 0, Last = Entity}
+    Target = Entity
+}
+Close = 0
+
+#Target = findPlayerByName("manners")
+Model = "models/holograms/hq_icosphere.mdl"
+#Model = "models/hunter/blocks/cube025x075x025.mdl"
+#Model = "models/hunter/blocks/cube2x2x2.mdl"
+#Model = "models/props_phx/huge/evildisc_corp.mdl"
+
+Cube1 = propSpawn(Model,entity():pos()+vec(0,0,10),ang(0,0,0),1)
+Cube2 = propSpawn(Model,entity():pos()+vec(0,0,30),ang(0,0,0),1)
+Cube3 = propSpawn(Model,entity():pos()+vec(0,0,50),ang(0,0,0),1)
+Cube4 = propSpawn(Model,entity():pos()+vec(0,0,70),ang(0,0,0),1)
+
+#Cube1:setAlpha(0)
+#Cube2:setAlpha(0)
+#Cube3:setAlpha(0)
+#Cube4:setAlpha(0)
+
+Cube1:setAlpha(0)
+Cube1:propShadow(0)
+Cube1:setMass(_INF)
+Cube1:setCollisionGroup(_COLLISION_GROUP_WEAPON)
+
+Cube2:setAlpha(0)
+Cube2:propShadow(0)
+Cube2:setMass(_INF)
+Cube2:setCollisionGroup(_COLLISION_GROUP_WEAPON)
+
+Cube3:setAlpha(0)
+Cube3:propShadow(0)
+Cube3:setMass(_INF)
+Cube3:setCollisionGroup(_COLLISION_GROUP_WEAPON)
+
+Cube4:setAlpha(0)
+Cube4:propShadow(0)
+Cube4:setMass(_INF)
+Cube4:setCollisionGroup(_COLLISION_GROUP_WEAPON)
+
+if(!Cube1:isValid()){ print("Cube didn't spawn! Restart E2") }else{print("Cube spawned.")}
+
+
+event tick()
+{
+    if(Target:isValid())
+    {
+        if(Close < 50){ Close += 1 }
+        
+        #Close = Target:boxMax():z()
+        #Close = 23
+        #Close = 50
+        Height = 150
+        if(Target:pos()+vec(-Close,Close,Height):isInWorld()){Cube1:setPos(Target:pos()+vec(-Close,Close,Height))}
+        if(Target:pos()+vec(Close,-Close,Height):isInWorld()){Cube2:setPos(Target:pos()+vec(Close,-Close,Height))}
+        if(Target:pos()+vec(-Close,-Close,Height):isInWorld()){Cube3:setPos(Target:pos()+vec(-Close,-Close,Height))}
+        if(Target:pos()+vec(0,0,-250):isInWorld()){Cube4:setPos(Target:pos()+vec(0,0,-250))}
+    }else
+    {
+        if(Close > 0){print(Close)}
+        Close = 0
+        
+        if(MapCubes:count() > 1111110)
+        {
+            Target = MapCubes:popEntity()
+        }
+    }
+    
+    
+    
+}
+
+event removed(_:number) {
+    propDeleteAll()
+}

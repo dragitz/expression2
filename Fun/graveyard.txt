@@ -1,0 +1,15 @@
+@name Graveyard
+@persist [Deaths DeathsMax] Model:string
+
+Deaths    = 0
+DeathsMax = holoMaxAmount() - 1
+
+Model = "models/props_c17/gravestone003a.mdl"    
+event playerDeath(Victim:entity, Inflictor:entity, Attacker:entity) {
+    
+    Deaths++
+    if(Deaths > DeathsMax){ Deaths = 0 }
+    
+    holoCreate(Deaths,Victim:pos()+vec(0,0,20),vec(1,1,1),ang(180,random(0,360),180),vec(random(0,255),random(0,255),random(0,255)),Model)
+}
+

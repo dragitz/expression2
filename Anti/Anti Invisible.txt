@@ -1,0 +1,163 @@
+@name Anti Invisible
+@persist People:table Time Material:table
+#owner():setMaterial("")
+if(first())
+{
+    People = table()
+    
+    Time = systime()
+    
+    Material = table(
+        "models/effects/vol_light001",
+        "models/spawn_effect"
+    )
+    
+    PP = findPlayerByName("avin")
+    print(PP:getMaterial())
+}
+
+# Keep monitoring
+event tick()
+{
+    
+    if(systime() - Time > 0.5)
+    {
+        Time = systime()
+        foreach(_:number, Player:entity=players())
+        {
+            const Steam = Player:steamID()
+            const Mat = Player:getMaterial():lower()
+            #print(Mat, Player)
+            if(
+                Mat == "models/effects/vol_light001" | 
+                Mat == "models/shadertest/unlitgenericmodel.mdl" |
+                Mat == "models/spawn_effect" 
+            )
+            {
+                # Check if player has already beed added to the list
+                if(People:exists(Steam)){ continue }
+                
+                People[Steam,number] = 1
+                
+                Number = Player:id()
+                holoCreate(Number)
+                holoVisible(Number,Player,0)
+                holoPos(Number,entity():pos()+vec(0,0,30))
+                
+                # Head
+                holoModel(Number,"cube")
+                holoColor(Number,vec(10,255,10))
+                holoAlpha(Number,200)
+                holoScale(Number,vec(-0.5,0.5,0.5))
+                holoPos(Number, Player:attachmentPos("anim_attachment_head"))
+                holoParentAttachment(Number,Player,"anim_attachment_head")
+                
+                # Body
+                Number = Number + 1000
+                #print(owner():attachments())
+                holoCreate(Number)
+                holoVisible(Number,Player,0)
+                holoPos(Number,entity():pos()+vec(0,0,30))
+                
+                holoModel(Number,"cube")
+                holoColor(Number,vec(200,250,10))
+                holoAlpha(Number,200)
+                holoScale(Number,vec(-0.5,0.5,2.5))
+                holoPos(Number, Player:attachmentPos("hips"))
+                holoParentAttachment(Number,Player,"hips")
+                
+                # Arm left
+                Number = Number + 1000
+                #print(owner():attachments())
+                holoCreate(Number)
+                holoVisible(Number,Player,0)
+                holoPos(Number,entity():pos()+vec(0,0,30))
+                
+                holoModel(Number,"cube")
+                holoColor(Number,vec(10,180,10))
+                holoAlpha(Number,200)
+                holoScale(Number,vec(-1.5,0.1,0.1))
+                holoPos(Number, Player:attachmentPos("anim_attachment_RH"))
+                holoParentAttachment(Number,Player,"anim_attachment_RH")
+                
+                # Arm right
+                Number = Number + 1000
+                #print(owner():attachments())
+                holoCreate(Number)
+                holoVisible(Number,Player,0)
+                holoPos(Number,entity():pos()+vec(0,0,30))
+                
+                holoModel(Number,"cube")
+                holoColor(Number,vec(10,180,10))
+                holoAlpha(Number,200)
+                holoScale(Number,vec(-1.5,0.1,0.1))
+                holoPos(Number, Player:attachmentPos("anim_attachment_LH"))
+                holoParentAttachment(Number,Player,"anim_attachment_LH")
+                
+                # Eyes
+                Number = Number + 1000
+                #print(owner():attachments())
+                holoCreate(Number)
+                holoVisible(Number,Player,0)
+                holoPos(Number,entity():pos()+vec(0,0,30))
+                
+                holoModel(Number,"sphere")
+                holoColor(Number,vec(210,0,10))
+                holoAlpha(Number,250)
+                holoScale(Number,vec(-0.1,0.1,0.1))
+                holoPos(Number, Player:attachmentPos("lefteye"))
+                holoParentAttachment(Number,Player,"lefteye")
+                
+                # Eyes
+                Number = Number + 1000
+                #print(owner():attachments())
+                holoCreate(Number)
+                holoVisible(Number,Player,0)
+                holoPos(Number,entity():pos()+vec(0,0,30))
+                
+                holoModel(Number,"sphere")
+                holoColor(Number,vec(210,0,10))
+                holoAlpha(Number,250)
+                holoScale(Number,vec(-0.1,0.1,0.1))
+                holoPos(Number, Player:attachmentPos("righteye"))
+                holoParentAttachment(Number,Player,"righteye")
+                
+                # Mouth
+                Number = Number + 1000
+                #print(owner():attachments())
+                holoCreate(Number)
+                holoVisible(Number,Player,0)
+                holoPos(Number,entity():pos()+vec(0,0,30))
+                
+                holoModel(Number,"cube")
+                holoColor(Number,vec(210,0,10))
+                holoAlpha(Number,250)
+                holoScale(Number,vec(-0.1,-0.2,0.05))
+                holoPos(Number, Player:attachmentPos("mouth"))
+                holoParentAttachment(Number,Player,"mouth")
+
+                print(Player:name() + " went invisible")
+                
+            }else
+            {
+                # Maybe the player isn't invisible anymore, therefore we delete the cube
+                if(!People:exists(Steam)){ continue }
+                
+                People:removeNumber(Steam)
+                Number = Player:id()
+                holoDelete(Number)
+                for(I=1,8)
+                {
+                    holoDelete(Number + I * 1000)
+                }
+                
+                
+            }
+        }
+    }
+    
+}
+
+event removed(Resetting:number) {
+    reset()
+}

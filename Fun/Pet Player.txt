@@ -1,0 +1,235 @@
+@name Pet Player
+@persist Forcer:entity Target:entity GoalTarget:entity StoredPos:vector
+@persist Mode Radius
+@outputs Velocity Length
+#[
+
+!bring bot
+
+Check if both owner and target player have access to the sky
+    * Target must be on ground and idle (or low speed)
+    If true:
+        1) Yeet target
+        2) make it hover
+        3) shoot it towards owner (keep max height)
+        4) once bot reaches a 2d distance of ~100 units, lower him down to owner
+        
+If everything properly works, this script can become:
+    -goto <target>
+    -freecam (forward looking)
+    
+Make a MoveTo(Dest:vector, Time:number)
+]#
+if(first())
+{
+
+    Forcer = entity():isWeldedTo()
+    
+    Target = noentity()
+    Mode = 1
+    Radius = 10
+    Velocity = 0
+    Length = 10
+    function vector forcerPos(TargetPos:vector, Goal:vector)
+    {
+        TargetPos = TargetPos + vec(0,0,Target:height() / 2)
+        X1 = TargetPos:x()
+        Y1 = TargetPos:y()
+        Z1 = TargetPos:z()
+        
+        X2 = Goal:x()
+        Y2 = Goal:y()
+        Z2 = Goal:z()
+        
+        # Calculate the vector from the black target to the red enemy
+        local Vx = X2 - X1
+        local Vy = Y2 - Y1
+        local Vz = Z2 - Z1
+        
+        # Calculate the length of the vector
+        local Length = sqrt(Vx * Vx + Vy * Vy + Vz * Vz)
+        
+        # Normalize the vector
+        local Nx = Vx / Length
+        local Ny = Vy / Length
+        local Nz = Vz / Length
+        
+        # Calculate the position of the green object on the opposite side of the orbit
+        local X_g = X1 - Radius * Nx
+        local Y_g = Y1 - Radius * Ny
+        local Z_g = Z1 - Radius * Nz
+        
+        return vec(X_g, Y_g, Z_g)
+    }
+    
+    function areSkysAvailable(TargetPos:vector, Goal:vector)
+    {
+        # Compute sky (margin of error of ~20)
+        local A = TargetPos + Goal
+        return A
+    }
+
+
+    # Function to apply force towards target position
+    function applyForceTowardsTarget(Who:entity, TargetPos:vector, Speed)
+    {
+
+        local CurrentPos = Who:pos()
+        local Difference = TargetPos - CurrentPos
+        local Distance = Difference:length()
+
+        #Ensure we're not dividing by zero
+        if (Distance < 250) { Velocity = 0, return }
+        
+        #Calculate normalized direction vector towards the target
+        local Direction = Difference:normalized()
+        
+        #Calculate the desired speed (proportional to the distance, with a cap at Speed)
+        local DesiredSpeed = min(Speed, Distance)
+        
+        #Calculate the desired velocity vector
+        local DesiredVel = Direction * DesiredSpeed
+        
+        #Get current velocity
+        local CurrentVel = Who:velL()
+        
+        #Calculate the acceleration needed to reach the desired velocity
+        local Acceleration = (DesiredVel - CurrentVel) * 0.4  #Damping factor
+        
+        #Calculate the new velocity by applying the acceleration
+        Velocity = (CurrentVel + Acceleration):length()
+        Velocity = 300
+        
+    }
+    
+}
+event tick()
+{
+    if(->Velocity & ->Length)
+    {
+        entity():propNotSolid(1)
+        entity():setAlpha(0)
+        entity():propFreeze(1)
+        Forcer:propNotSolid(1)
+        Forcer:setAlpha(0)
+        Forcer:propFreeze(1)
+        
+        
+        #Velocity = owner():velL():length()
+        if(Mode == 1)
+        {            
+            GoalPos = GoalTarget:pos()
+        }
+        if(Mode == 2)
+        {
+            GoalPos = vec(0,0,0)
+        }        
+        if(Mode == 3)
+        {
+            GoalPos = StoredPos
+        }
+        if(Mode == 4)
+        {
+            GoalPos = Target:shootPos()+Target:eye()*10
+        }
+        
+        # Rotate
+        Vec_dir = Forcer:pos() - (GoalPos)
+        AimAngle = Vec_dir:toAngle()
+        
+        Pitch = AimAngle:pitch() + 90
+        Yaw = AimAngle:yaw()
+        Roll = AimAngle:roll() - 180
+        
+        Forcer:setAng(ang(Pitch,Yaw,Roll))  
+        
+        #if(Mode == 4 & !Target:keyWalk()){ exit() }
+        
+        
+        if(Target:isValid() & GoalPos != vec(0,0,0) & GoalPos:isInWorld())
+        {
+            GreenPos = forcerPos(Target:pos(), GoalPos)
+            if(GreenPos:isInWorld()){ Forcer:setPos(GreenPos) }
+            
+            # Good 
+            const Speed = Target:velL():length()
+            local Difference = GoalPos-Forcer:pos()
+            local Distance = Difference:length()
+            local TargetVel = Difference* min(Speed/Distance, 1)
+            
+            applyForceTowardsTarget(GoalTarget, Target:pos(), TargetVel:length())
+            
+            
+            
+                        
+        }
+    }
+    
+}
+
+event chat(Player:entity, Message:string, _:number) {
+    
+    if(Player == owner() & Message[1] == "!")
+    {
+        hideChat(1)
+        Exploded = Message:explode(" ")
+        
+        Command = Exploded[1,string]:lower()
+        Argument = Exploded[2,string]
+        Argument2 = Exploded[3,string]
+        
+        
+        switch(Command)
+        {
+            case "!magnet",
+            case "!pet",
+                Mode = 1
+                Target = findPlayerByName(Argument)
+                GoalTarget = owner()
+            break
+            
+            case "!go",
+                Mode = 1
+                Target = owner()
+                GoalTarget = findPlayerByName(Argument)
+            break
+            case "!attach",
+                
+                if(Argument2 == "" | Argument == "")
+                {
+                    print("Invalid targets")
+                }else
+                {
+                    Mode = 1
+                    Target = findPlayerByName(Argument)
+                    GoalTarget = findPlayerByName(Argument2)
+                }
+                
+            break
+            case "!stop",
+                Mode = 2
+                Target = noentity()
+                GoalPos = vec(0,0,0)
+            break
+            case "!radius",
+                Radius = Argument:toNumber()
+                Length = Radius
+            break
+            case "!block",
+            case "!lock",
+            case "!freeze",
+                Mode = 3
+                Target = findPlayerByName(Argument)
+                StoredPos = Target:pos()
+            break
+            case "!fly",
+                Mode = 4
+                Target = owner()
+            break
+            
+                
+        }
+        
+        print(Target:name())
+    }
+}

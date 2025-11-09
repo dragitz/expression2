@@ -1,0 +1,479 @@
+@name Download server props 2
+@persist [Cache ReverseIndex WeldTable EntityData FinalTable]:table Lookup:table
+
+# WIP
+#@persist MapCheck PositionRelative
+
+@persist [Filename OriginalMap]:string
+@persist SetupDone ConfirmState InitialEntity:entity
+
+@persist CurrentTableIndex TotalProps
+
+@persist CurrentCode:string Lines MaxLines
+@persist Tick MaxTick
+@persist PropProcessPerTick WeldProcessPerTick LinesProcessPerTick
+
+@persist Phase
+@persist CurrentCacheIndex AllConnected:array CachedKeys:array
+@persist CurrentWeldIndex
+
+@persist [FILE_BEGIN FILE_END]:string
+
+# DEBUG
+@persist InitialTime
+@persist DISABLE_FILE_SAVE
+@strict
+
+
+#[
+
+        TODO:
+        - Optimize speed of loader
+        - Remove or change bad code
+
+]#
+if(first() | dupefinished())
+{
+    
+    
+    Filename = "_test"
+    
+    
+    # If set to true, the saved prop pos will be saved with coords relative to the chip
+    # W.I.P
+    #PositionRelative = 0
+    
+        
+    # If set to 1, script will try to avoid spawning props, unless it is being spawned there
+    # Can be disabled in the generated script
+    #MapCheck = 1
+    OriginalMap = _MAP
+    
+    #  ------------------------------------------
+    
+    # How many lines before fileAppend triggers (prevents chip crash when lots of props are saved)
+    # (kind of an autosave that frees memory)
+    Lines = 0
+    MaxLines = 50
+    
+    # Delay to prevent chip crash
+    Tick = 0
+    MaxTick = 2
+    
+    InitialTime = systime()
+    
+    # PERFORMANCE: can go from 5 to 43 seconds on a 212 prop list
+    # How many props should be cached per tick
+    PropProcessPerTick = 40
+    # How many props should be checked for welds per tick
+    WeldProcessPerTick = 20
+    # How many lines of code should be generated per tick (keep this one low, or increase MaxTick)
+    LinesProcessPerTick = 10
+    
+    
+    # Saving will only happen if this flag is set to 1
+    SetupDone = 0
+    
+    # Saving state
+    CurrentTableIndex = 1
+    TotalProps = 1
+    
+    ConfirmState = 0
+    
+    Phase = 0
+    
+    #  ------------------------------------------
+    # Do not change what comes after this (unless you know what you are doing)
+    
+    Lookup = table(
+        "prop_physics" = 1
+    )
+    
+    
+    # avoid tick quota errors (RIP cool looking functions)
+    AllConnected = array()
+    CurrentCacheIndex = 1
+    CurrentWeldIndex = 1
+
+    # Entity list
+    Cache = table()
+    ReverseIndex = table()
+    WeldTable = table()   # Entity weld data
+    EntityData = table()  # Individual entity data (not weld, but color, pos, rotation, etc..)
+    
+    
+    #[
+        This table will be saved in the new file in the "e2shared" folder.
+    ]#
+    FinalTable = table(
+        "Entities" = table(),
+        "Data" = table(),
+        "Welds" = table()
+    )
+    
+    Host = hostname():replaceRE("[^%w%s%p]",""):replace("[",""):replace("]",""):replace(" ","")
+    Final_name = Filename+"_"+OriginalMap+"_"+Host+"_"+time("year")+time("month")+time("day")+time("hour")+time("min")+time("sec") # Do not edit this one
+    
+    CurrentCode = ""
+    
+    InitialEntity = noentity()
+    
+    local MSG = "Switch to your crowbar and right click the prop", print(MSG), hint(MSG,7.5)
+    
+    # Do not dare to change this o__o
+    FILE_BEGIN = ""
+    FILE_END = "                }\n                \n                CurrentSetupIndex += 1\n                if(CurrentSetupIndex >= TotalEntities){     \n                    SetupDone = 1\n                    Phase = 1\n                    print(\"Phase 1: Spawning... (1/3)\")\n                    hint(\"Phase 1: Spawning... (1/3)\",3.5)\n                    exit()\n                }\n                \n            }\n        }\n    }\n    \n    # Keeping it at 80% just in case\n    if( perf(80) ){\n\n        if(Phase == 1 & propCanCreate())\n        {\n            if(CurrentIndex >= TotalEntities){ MSG = \"Finished spawning! Now welding! (2/3)\", print(MSG), hint(MSG,3.5), Phase = 2, CurrentIndex = 1, exit() }\n            \n            # Decode entity data and spawn\n            const Model = FinalTable[\"Data\",table][CurrentIndex,table][\"Model\",string],\n            const Pos   = FinalTable[\"Data\",table][CurrentIndex,table][\"Pos\",vector],\n            const Ang   = FinalTable[\"Data\",table][CurrentIndex,table][\"Ang\",angle],\n            const Mass   = FinalTable[\"Data\",table][CurrentIndex,table][\"Mass\",number],\n        \n            const Color   = FinalTable[\"Data\",table][CurrentIndex,table][\"Color\",vector],\n            const Alpha   = FinalTable[\"Data\",table][CurrentIndex,table][\"Alpha\",number],\n            const Material   = FinalTable[\"Data\",table][CurrentIndex,table][\"Material\",string],\n\n            if(Errors > MaxErrors){ Errors = 0, print(\"CurrentIndex: \"+CurrentIndex, \" - \", \"Model: \"+Model), CurrentIndex += 1, exit()}\n            # Spawn            \n            const Entity = propSpawn(Model,Pos,Ang,1)\n            if(!Entity:isValid()){ Errors += 1, exit() }\n            \n            FinalTable[\"Entities\",table][CurrentIndex,number] = Entity:id()\n            \n            Entity:setMass(Mass)\n            Entity:setColor(Color)\n            Entity:setAlpha(Alpha)\n            Entity:setMaterial(Material)\n        \n            CurrentIndex += 1\n            \n            \n        }elseif(Phase == 2)\n        {\n            const Welds = FinalTable[\"Welds\",table][CurrentIndex,array]\n            for(I=1,Welds:count())\n            {\n                const NTT = entity(FinalTable[\"Entities\",table][CurrentIndex,number])\n                \n                const LOOKUP = FinalTable[\"Entities\",table][I,number]\n                const NTT_TARGET = entity(LOOKUP)\n                NTT:weld(NTT_TARGET)\n            }\n            \n            CurrentIndex += 1\n            if(CurrentIndex >= TotalEntities){ MSG = \"Finished welding! Now unfreezing.. (3/3)\", print(MSG), hint(MSG,3.5), Phase = 3, CurrentIndex = 1 }\n            \n        }elseif( Phase == 3 )\n        {\n            const FrozenState = FinalTable[\"Data\",table][CurrentIndex,table][\"FrozenState\",number]\n            \n            # Checking value to save some ops\n            if(!FrozenState)\n            {\n                const LOOKUP = FinalTable[\"Entities\",table][CurrentIndex,number]\n                \n                local NTT = entity(LOOKUP)\n                NTT:propFreeze(FrozenState)\n            }\n            \n            CurrentIndex += 1\n            if(CurrentIndex >= TotalEntities){ MSG = \"Dupe spawned!\", print(MSG), hint(MSG,3.5), selfDestruct(), exit()}\n        }\n        \n    }\n}\n"
+    
+    # Debug
+    DISABLE_FILE_SAVE = 0
+}
+
+#  ------------------------------------------
+    # Feel free to add more, but remember to implement it in the save n' load function
+    function setEntityData(E:entity)
+    {
+        #local Pos = E:pos()
+        if(E:model() == ""){ exit() }
+        EntityData[E:id(),table] = table(
+            "Model" = E:model(),
+            "Pos"   = E:pos(),
+            "Ang"   = E:angles(),
+            "Mass"   = E:mass(),
+            
+            "Color"   = E:getColor(),
+            "Alpha"   = E:getAlpha(),
+            "Material"   = E:getMaterial(),
+            
+            "FrozenState" = E:isFrozen()
+        )
+        
+    }    
+    #  ------------------------------------------
+    
+    
+    #  ------------------------------------------
+    # This function will hold the table that will be stored in the new e2 file
+    # NOTE: this has never crashed the chip. so I never bothered porting it to event tick()
+    function constructFinalTable()
+    {
+        foreach(EntityIndex:number, EntId:number = Cache:keys()) {
+            FinalTable["Entities",table][EntityIndex,number] = EntityIndex
+            
+            FinalTable["Data",table][EntityIndex,table] = EntityData[EntId,table]
+            
+            FinalTable["Welds",table][EntityIndex,array] = array()
+            
+            for(I=1,WeldTable[EntId,array]:count())
+            {
+                #print(EntId + " attached to ---> "+WeldTable[EntId,array][I,number])
+                
+                const EntityToReverse = WeldTable[EntId,array][I,number]
+                #print(EntityToReverse)
+                #const ReverseId = Cache[WeldTable[EntId,array][I,number],number]
+                #const ReverseId = Cache["ReverseIndex",table][EntId,number]
+                
+                const ReverseId = Cache[EntityToReverse,number]
+                
+                #print(ReverseId + "( attached to ---> )"+EntId)
+                
+                FinalTable["Welds",table][EntityIndex,array]:pushNumber(ReverseId)
+            }
+                
+        }
+        
+        # Write initial file here:
+        if(!DISABLE_FILE_SAVE)
+        {
+            fileWrite(">e2shared/"+Final_name+".txt",FILE_BEGIN)
+        }
+        local MSG = "4/4 FinalTable constructed! generating code...", print(MSG), hint(MSG,3.5), Phase = 4, Tick = 1, exit()
+    }
+    
+    
+    
+    #  ------------------------------------------
+    
+    # Convert the FinalTable to a string
+    function string tableIndexToString(TableIndex:number)
+    {
+        local Code = ""
+        
+        Code += "                case "+TableIndex+","
+        Code += "\n"
+        Code += "                    FinalTable[\"Entities\",table]["+TableIndex+",number] = 1,"
+        
+        
+         #[
+            FinalTable = table(
+                "Entities" = table(),
+                "Data" = table(),
+                "Welds" = table()
+            )
+        ]#
+        Code += "FinalTable[\"Data\",table]["+TableIndex+",table] = table(),"
+        Code += "FinalTable[\"Data\",table]["+TableIndex+",table][\"Model\",string] = "+"\""+FinalTable["Data",table][TableIndex,table]["Model",string]+"\", "
+        Code += "FinalTable[\"Data\",table]["+TableIndex+",table][\"Pos\",vector] = "+FinalTable["Data",table][TableIndex,table]["Pos",vector]+", "
+        Code += "FinalTable[\"Data\",table]["+TableIndex+",table][\"Ang\",angle] = "+FinalTable["Data",table][TableIndex,table]["Ang",angle]+", "
+        Code += "FinalTable[\"Data\",table]["+TableIndex+",table][\"Mass\",number] = "+FinalTable["Data",table][TableIndex,table]["Mass",number]+", "
+        
+        Code += "FinalTable[\"Data\",table]["+TableIndex+",table][\"Color\",vector] = "+FinalTable["Data",table][TableIndex,table]["Color",vector]+", "
+        Code += "FinalTable[\"Data\",table]["+TableIndex+",table][\"Alpha\",number] = "+FinalTable["Data",table][TableIndex,table]["Alpha",number]+", "
+        Code += "FinalTable[\"Data\",table]["+TableIndex+",table][\"Material\",string] = "+"\""+FinalTable["Data",table][TableIndex,table]["Material",string]+"\", "
+        
+        Code += "FinalTable[\"Data\",table]["+TableIndex+",table][\"FrozenState\",number] = "+FinalTable["Data",table][TableIndex,table]["FrozenState",number]
+        
+        Code += "\n"
+        
+        Code += "                    FinalTable[\"Welds\",table]["+TableIndex+",table] = table()\n"
+        Code += "                    FinalTable[\"Welds\",table]["+TableIndex+",array] = "+FinalTable["Welds",table][TableIndex,array]:toString()
+        
+        Code += "\n                break\n"
+        
+        
+        return Code
+    }
+    
+    #print(tableIndexToString(1))
+    # Now create the file
+    
+event tick()
+{
+    if(!SetupDone | !Phase){ exit() }
+    
+    #[
+        Phase 1 = Cache props
+        Phase 2 = computeConnections
+        Phase 3 = constructFinalTable
+        Phase 4 = generate code
+        
+    ]#
+    
+    Tick += 1
+    if(Tick > MaxTick){ Tick = 0}
+    
+    if(perf(50) & !Tick)
+    {
+        
+        if(Phase == 1)
+        {
+            if(CurrentCacheIndex > AllConnected:count() + 1){
+                local MSG = "2/4 Cashing done! Computing connections...", print(MSG), hint(MSG,3.5), Phase = 2, exit()
+                
+                CachedKeys = Cache:keys() # this is meta caching
+                exit()
+            }
+            
+            # I wanted to make use of the function declared in first() but tick quota is reached,
+            # this way is better overall..
+            for(_=1,PropProcessPerTick)
+            {
+                local Ent = AllConnected[CurrentCacheIndex,entity]
+                local EntityIndex = CurrentCacheIndex
+                
+                # bastard got through check
+                if(!Ent:isValid() | !Lookup[Ent:getClass(),number]){ CurrentCacheIndex += 1, continue }
+                
+                Cache[Ent:id(), number] = EntityIndex
+                ReverseIndex[EntityIndex,number] = Ent:id()
+                
+                #print(Ent:id() + " has ReverseIndex value of: "+EntityIndex)
+                
+                WeldTable[Ent:id(),array] = array()
+                setEntityData(Ent)
+                
+                TotalProps += 1
+                CurrentCacheIndex += 1
+            }
+            
+            exit()
+                       
+        }
+        elseif( Phase == 2)
+        {
+            if(Cache:keys():count() > 0 & CachedKeys:count() != Cache:keys():count())
+            {
+                CachedKeys = Cache:keys()
+                #print("Yup, stored keys again: ",CachedKeys:count())
+                exit()
+            }
+            
+            for(_=1,WeldProcessPerTick)
+            {
+                # Find all weldings
+                EntId = CachedKeys[CurrentWeldIndex,number]
+                
+                #const ReverseID = Cache[EntId, number]
+                const Entity = entity(EntId)
+                
+                # Gotta be honest, this shouldn't happen...
+                if(!Entity:isValid() | !Lookup[Entity:getClass(),number]){ CurrentWeldIndex += 1 }
+                
+                
+                const Constraints = Entity:hasConstraints("weld")
+                
+                for(I=1,Constraints)
+                {
+                    # Returns the Nth entity E was constrained to with the given constraint type
+                    local TargetEnt = Entity:isConstrainedTo("weld",I)
+                    
+                    if(!Entity:isValid() | !TargetEnt:isValid() | !Lookup[TargetEnt:getClass(),number]){ continue }
+                    
+                    #print("[+]   ",TargetEnt)
+                    WeldTable[Entity:id(),array]:pushNumber(TargetEnt:id())
+                }
+              
+                # -----------------------            
+                CurrentWeldIndex += 1
+                if(CurrentWeldIndex > AllConnected:count()){
+                    local MSG = "3/4 Got welding data! constructing FinalTable...", print(MSG), hint(MSG,2.5), Phase = 3, exit()
+                }
+            }
+            exit()
+            
+        }elseif( Phase == 3)
+        {
+            #FILE_BEGIN = "@name Spawning: "+Filename+"\n@persist CurrentIndex SetupDone FinalTable:table TotalEntities Phase\n\n#[\n    Phase 1 = Spawn\n    Phase 2 = Apply welds\n    Phase 3 = Unfreeze if necessary\n]#\n\nif(first())\n{\n    SetupDone = 0\n    CurrentIndex = 1\n    \n    Phase = 0\n    \n    FinalTable = table(\n        \"Entities\" = table(),\n        \"Data\" = table(),\n        \"Welds\" = table()\n    )\n    \n    TotalEntities = "+TotalProps+"\n\n"
+            FILE_BEGIN = "@name Spawning: "+Filename+"\n@persist CurrentIndex SetupDone FinalTable:table TotalEntities Phase\n@persist Tick MaxTick\n\n@persist Errors MaxErrors\n@persist PropsTablePerTick\n\n@persist CurrentSetupIndex\n\n#[\n    Phase 1 = Spawn\n    Phase 2 = Apply welds\n    Phase 3 = Unfreeze if necessary\n]#\n\nif(first())\n{\n    TotalEntities = "+TotalProps+"\n    \n    SetupDone = 0\n    CurrentIndex = 1\n    \n    Phase = 0\n    \n    Tick = 0\n    MaxTick = 2\n    \n    Errors = 0\n    MaxErrors = 4\n    \n    PropsTablePerTick = 5\n    \n    FinalTable = table(\n        \"Entities\" = table(),\n        \"Data\" = table(),\n        \"Welds\" = table()\n    )\n    \n    CurrentSetupIndex = 1\n    \n    \n    print(\"Setting up table..\")\n}\n\nevent tick()\n{\n    if(!SetupDone | !Phase){\n    \n        Tick += 1\n        if(Tick > MaxTick){ Tick = 0}\n        \n        if(!Tick)\n        {\n            for(_=1,PropsTablePerTick)\n            {\n                switch(CurrentSetupIndex)\n                {\n"
+            constructFinalTable()
+            exit()
+        }
+        elseif( Phase == 4)
+        {
+            #[
+            EncodedTable = vonEncode(FinalTable)
+            CurrentCode = "FinalTable = vonDecodeTable("+EncodedTable+")\n"
+            CurrentCode += FILE_END
+            
+            fileAppend(">e2shared/"+Final_name+".txt",CurrentCode)
+            ]#
+            
+            if(!FinalTable["Entities",table][CurrentTableIndex,number])
+            {
+                # Check for remaining lines to be appended
+                if(fileCanWrite())
+                {
+                    # Finish writing
+                    if(Lines > 0)
+                    {
+                        if(!DISABLE_FILE_SAVE){
+                            if(fileAppend(">e2shared/"+Final_name+".txt",CurrentCode))
+                            {
+                                CurrentCode = ""
+                                Lines = 0
+                            }
+                        }
+                        
+                        exit()
+                    }
+                    
+                    # Generate code
+                    if(!DISABLE_FILE_SAVE){
+                        fileAppend(">e2shared/"+Final_name+".txt",FILE_END)
+                    }
+                    local MSG = "Done! Check your: e2shared folder :D", print(MSG), hint(MSG,6.0)
+                    
+                    print("Time taken: ", systime() - InitialTime)
+                    selfDestruct()
+                    exit()
+                }
+                
+                
+            }
+            
+            for(_=1,LinesProcessPerTick)
+            {
+                CurrentCode += tableIndexToString(CurrentTableIndex)
+    
+                Lines += 1            
+                CurrentTableIndex += 1
+    
+                if(Lines >= MaxLines & fileCanWrite())
+                {
+                    if(!DISABLE_FILE_SAVE){
+                        fileAppend(">e2shared/"+Final_name+".txt",CurrentCode)
+                    }
+                    CurrentCode = ""
+                    Lines = 0
+                }
+            }
+            
+        }
+        
+    }
+}
+
+event keyPressed(Player:entity, Key:string, Down:number, KeyBind:string) {
+    if(SetupDone | !Down | Player != owner()){ exit() }
+    
+    if(KeyBind != "attack2" | owner():weapon():getClass() != "weapon_crowbar"){ exit() }
+    
+    const AimedEnt = owner():aimEntity()
+    #if(AimedEnt:isValid() & AimedEnt:owner():isValid() & AimedEnt:owner() != owner() & AimedEnt:owner() != world() ){
+    if(AimedEnt:isValid() & AimedEnt:owner():isValid() & AimedEnt:owner() != world() ){
+        
+        
+        if(InitialEntity != AimedEnt & !ConfirmState)
+        {
+            InitialEntity = AimedEnt
+            ConfirmState += 1
+            
+            local MSG = "Right click again to confirm."
+            print(MSG)
+            hint(MSG,3.5)
+            exit()
+        }
+        elseif(InitialEntity:isValid() & InitialEntity == AimedEnt & ConfirmState)
+        {
+            AllConnected = InitialEntity:getConnectedEntities("weld")
+            
+            # This should add a bit more props
+            findIncludePlayerProps(InitialEntity:owner())
+            findByClass("prop_physics")
+            findInSphere(InitialEntity:pos(),900)
+            Extra = findToArray()
+            for(I=1,Extra:count())
+            {
+                if(!Lookup[Extra[I,entity]:getClass(),number]){ continue }
+                AllConnected:pushEntity(Extra[I,entity])
+            }
+            
+            InitialTime = systime()
+            
+            local MSG = "1/4 Cashing props..."
+            print(MSG)
+            hint(MSG,3.5)
+            
+            SetupDone = 1
+            Phase = 1
+            exit()
+        }
+        
+    }else
+    {
+        local MSG = "Invalid entity! Aim at something else!"
+        print(MSG)
+        hint(MSG,3.5)
+        exit()
+    }
+}
+
+
+
+# Debug code to show linked props
+#[
+const Array = Links[InitialEntity:id(),array]
+const Count = Array:count()
+print(Count)
+for(I=1,Count)
+{
+    holoCreate(I)
+    holoPos(I,entity(Array[I,number]):pos()+vec(0,0,50+10*I))
+}
+#]
+
+
+
+
+
+
+

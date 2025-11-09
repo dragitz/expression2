@@ -1,0 +1,35 @@
+@name RapidFire
+@persist Me:entity KeyTick Key Clip
+
+if(first())
+{
+    Me = owner()
+    KeyTick = 0
+    
+    runOnTick(1)
+    runOnKeys(Me,1,array("mouse_left"))
+    
+    function void keyPress(CMD:string,RESET:string)
+    {
+        if(CMD != ""){concmd(CMD),KeyTick = 3}
+        elseif(RESET != ""){concmd(RESET),KeyTick = 0}
+    }
+}
+
+Key = Me:isFlashlightOn()
+
+if(Me:weapon():type() != "gmod_tool" && Me:weapon():type() != "weapon_physgun" & Me:weapon():clip1() > 0 & KeyTick < 1 & Me:weapon():isWeapon()) #&& Key
+{
+    if(Me:keyPressed("mouse_left"))
+    {
+       keyPress("+attack","-attack")
+    }
+
+}
+
+
+if(KeyTick > 0)
+{
+    KeyTick--
+    if(KeyTick == 1){keyPress("","-attack")}
+}

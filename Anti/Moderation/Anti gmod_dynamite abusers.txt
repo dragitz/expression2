@@ -1,0 +1,116 @@
+@name Anti gmod_dynamite abusers
+@persist [Exploders BlackListedProps Types]:table Threshold
+@persist Time
+
+# Keep this between 24 and 60
+Threshold = 30 # 24 is ok, but in some rare cases it might trigger too much, 60 is an alternative
+
+Exploders = table()
+
+Time = curtime()
+
+
+if(first())
+{
+    BlackListedProps = table(
+        "models/props_phx/mk-82.mdl" = 1,
+        "models/props_phx/misc/potato_launcher_explosive.mdl" = 1,
+        "models/props_phx/oildrum001_explosive.mdl" = 1,
+        "models/props_c17/oildrum001_explosive.mdl" = 1,
+        "models/combine_helicopter/helicopter_bomb01.mdl" = 1,
+        "models/hunter/misc/shell2x2.mdl" = 1,
+        "models/props_phx/ball.mdl" = 1,
+        "models/props_phx/ww2bomb.mdl" = 1,
+        "models/props_phx/cannonball.mdl" = 1,
+        "models/props_phx/cannonball_solid.mdl" = 1,
+        "models/props_phx/torpedo.mdl" = 1,
+        "models/props_phx/misc/flakshell_big.mdl" = 1,
+        "models/props_phx/amraam.mdl" = 1,
+        "models/props_junk/gascan001a.mdl" = 1
+    )
+    
+    Types = table(
+        "gmod_wire_explosive" = 1,
+        "prop_physics" = 1
+        #"env_explosion" = 1
+    )
+}
+
+event entityCreated(Entity:entity) {
+    
+    # Prevent chip crashes
+    if( !Types[Entity:type(),number] ) { exit() }
+    if( !BlackListedProps[Entity:model(), number] ){ exit() }
+    
+    
+    Player  = Entity:owner()
+    SteamID = Player:steamID()            
+
+    # Avoid further crashes
+    if( Exploders[SteamID,number] > 100){ exit() }
+
+    # Assign score
+    if(!Exploders:exists(SteamID))
+    {
+        Exploders[SteamID,number] = 1
+    }
+    else
+    {
+        if(Exploders[SteamID,number] < Threshold)
+        {
+            Exploders[SteamID,number] = Exploders[SteamID,number] + 1
+        }
+    }
+}
+
+event tick()
+{
+    local Compare = curtime()
+    
+    # This is the exploit, basically if someone respects this rule of spawning explosives are the right time
+    # -- they can bypass this chip
+    
+    # But since this e2 is made to prevent people who abuse dupes from the workshop
+    # -- most of them don't know how to code, therefore very few know even how to open this window and bypass this
+    if(Compare - Time >= 0.8)
+    {
+        Time = Compare
+        local Keys = Exploders:keys()
+        
+        for(I=1,Exploders:count())
+        {   
+            Key = Keys[I,string]
+            Score = Exploders[Key,number]
+            
+            
+            if(Score <= 0){ continue }
+            
+            #print(Key, "  ", Score)
+            # Kill if needed
+            if(Score > Threshold / 2){print(Score)}
+            
+            if(Score >= Threshold)
+            {
+                Who = findPlayerBySteamID(Key)
+                
+                if(Who:isValid() & Who:isAlive() & Who:pos():isInWorld() & propCanCreate())
+                {
+                    Ent=propSpawn("models/props_phx/cannonball_solid.mdl",Who:pos(),ang(0,0,0),0)
+                    Ent:propBreak()
+                    
+                    print(Who:name() + "  created an explosive. Score: ",Score)
+                    
+                    Exploders[Who:steamID(),number] = 0
+                    
+                }
+            }
+            
+            if(Score > 0){Exploders[Key,number] = Exploders[Key,number] - 1 }
+        }
+    }
+
+}
+
+event removed(Resetting:number) {
+    reset()
+}

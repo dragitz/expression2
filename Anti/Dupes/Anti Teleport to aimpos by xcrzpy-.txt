@@ -1,0 +1,118 @@
+@name Anti Teleport to AimPos by xCrzpy-
+@persist [Data People E2]:table Prop:entity Tick TriggeredBy:entity OriginalSpot:vector
+@persist LastTrriggeredBy:entity
+#@model models/hunter/blocks/cube075x075x075.mdl
+
+if(first() | duped())
+{
+    if(dupefinished()){ entity():propNoDupe(1) }
+    
+    entity():propNoDupe(0)
+    entity():propFreeze(1)
+    
+    propSpawnUndo(0)
+    
+    Tick = 0
+    TriggeredBy = noentity()
+    LastTrriggeredBy = noentity()
+    OriginalSpot = entity():pos()+vec(0,0,60)
+    Data = table(
+        "Teleport to AimPos by xCrzpy-" = 1,
+        "gmod_wire_expression2" = 1,
+        "weapon_crowbar" = 1,
+        "mouse_right" = 1
+    )
+    People = table()
+    E2 = table()
+    
+    #Prop = propSpawn("models/hunter/plates/plate3x3.mdl",1)
+    #Prop = propSpawn("models/hunter/blocks/cube075x075x075.mdl",1)
+    Prop = propSpawn("models/hunter/blocks/cube1x1x1.mdl",1)
+    #Prop = entity()
+    Prop:propDraw(0)
+    Prop:setCollisionGroup(_COLLISION_GROUP_PASSABLE_DOOR)
+    Prop:setPos(OriginalSpot)
+    
+    if(!Prop:isValid()){ print("Prop did not spawn! Respawn the chip") }
+    
+    # find already spawned chips
+    findByClass("gmod_wire_expression2")
+    local Arr = findToArray()
+    for(Q=1,Arr:count())
+    {
+        const Entity = Arr[Q,entity]
+        
+        if(!Data[Entity:getName(),number]){ continue }
+        
+        #const ID = Entity:id()
+               
+        E2[Entity:id(),number] = 1
+        People[Entity:owner():steamID64(),number] = 1
+
+        print("Detected spawned \"Teleport to AimPos\" by: "+Entity:owner():name())
+    }
+}
+
+
+event entityCreated(Entity:entity) {
+    if(!Data[Entity:type(),number] || !Data[Entity:getName(),number]){ exit() }
+        
+    # entity id may not be the best, but tick will remove it from the list, so should be fine
+    E2[Entity:id(),number] = 1
+    People[Entity:owner():steamID64(),number] = 1
+
+    print("Spawned \"Teleport to AimPos\" by: "+Entity:owner():name())
+}
+
+event keyPressed(Player:entity, Key:string, Down:number, KeyBind:string) {    
+    
+    if(!Down | !Data[Player:weapon():type(),number] | !Data[Key,number]){ exit() }
+    if(!People[Player:steamID64(),number]){ exit() }
+    
+    Prop:setPos(Player:pos()+vec(0,0,72))
+    TriggeredBy = Player
+    
+    if(TriggeredBy != LastTrriggeredBy)
+    {
+        print(Player:name() + " tried to TP. Prevented!")
+        LastTrriggeredBy = Player
+    }
+}
+
+event playerLeftVehicle(Player:entity, Vehicle:entity) {
+    if(Player != TriggeredBy){ exit() }
+    Prop:setPos(OriginalSpot)
+    TriggeredBy = noentity()
+}
+
+event tick()
+{
+    Tick += 1
+    if(Tick >= 2){ Tick = 0 }
+    
+    if(!Tick)
+    {
+        # Remove invalid turrets
+        local Keys = E2:keys()
+        for(I=1,Keys:count())
+        {
+            const ID = Keys[I,number]
+            if(!entity(ID):isValid()){ E2:unset(ID), continue }
+        }
+        
+        # Unset turret owners if there are no owned turrets by them
+        People = table()
+        Keys = E2:keys()
+        for(I=1,Keys:count())
+        {
+            const ID = Keys[I,number]
+            const Entity = entity(ID)
+            const Steam = Entity:owner():steamID64()
+            People[Steam,number] = 1
+        }
+    }
+}
+
+event removed(Resetting:number) {
+    print(entity():getName()+" - removed!")
+}

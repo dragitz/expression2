@@ -1,0 +1,75 @@
+@name Block fast projectiles
+@persist Objects:array Obj:entity MaxSpeed
+
+Obj = propSpawn("models/hunter/blocks/cube075x075x075.mdl",entity():pos(),1)
+Obj:propFreeze(1)
+Obj:setAlpha(0)
+
+MaxSpeed = 1000
+
+event chat(Player:entity, Message:string, Team:number) {
+    
+    if(Player == owner() && Message[1] == "!")
+    {
+        hideChat(1)
+        Exploded = Message:explode(" ")
+        
+        Command = Exploded[1,string]
+        Argument = Exploded[2,string]:toNumber()
+        
+        
+        if(Command == "!maxspeed")
+        {
+            MaxSpeed = Argument
+            print("New max prop speed is: ", MaxSpeed)
+        }
+        
+    }
+}
+event tick()
+{   
+    if(ops() < 500 & perf())
+    {
+        if(findCanQuery())
+        {
+            findByClass("prop_physics")
+            Objects = findToArray()
+        }
+        
+        for(I=1,Objects:count())
+        {
+            Ent = Objects[I,entity]
+            if(
+                Ent == Obj || 
+                Ent:isFrozen() ||
+                !Ent:owner():isValid()
+                
+            ){continue}
+            
+            
+            Velocity = Ent:vel():length()
+            
+            if(Velocity > MaxSpeed)
+            {
+                Pos = Ent:pos() + Ent:vel()  * (70 / 1000)
+                
+                if(Pos:isInWorld())
+                {
+                    Obj:setPos(Pos)
+                }
+            }
+        }
+        # In case out obj gets destroyed
+        if(!Obj:isValid())
+        {
+            #Obj = propSpawn("models/hunter/blocks/cube075x075x075.mdl",entity():pos(),1)
+            #Obj:propFreeze(1)
+            #Obj:setAlpha(0)
+            
+            print("E2 Prop deleted. Deleting E2... --"+entity():getName())
+            selfDestructAll()
+        }
+    }
+}
+
+event removed(_:number) {print("Block fast projectiles E2 has been removed"), selfDestructAll()}
