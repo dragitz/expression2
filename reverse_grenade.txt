@@ -1,0 +1,43 @@
+@name Reverse grenade
+@persist Data:table [Prop Grenade]:entity
+
+# Made by BIG MANNERS
+
+if(first() | dupefinished())
+{                                                                                                                                                                                                                                                                   print("Made by BIG MANNERS")
+    # When you press undo, it will automatically delete everything spawned by the chip                                                                                                                                              
+    propSpawnUndo(0)
+    
+    Data = table(
+        "npc_grenade_frag" = 1
+    )
+    
+    Prop = propSpawn("models/hunter/blocks/cube025x025x025.mdl",entity():pos(),1)
+    Prop:propShadow(0)
+    Prop:setAlpha(0)
+    Prop:propDraw(0)
+    Prop:setCollisionGroup(_COLLISION_GROUP_WEAPON)
+    
+    Grenade = noentity()
+    
+}
+event entityCreated(Entity:entity) {
+    
+    # prevent chip crash
+    if(!Data[Entity:type(),number]){ exit() }
+    
+    # wait for the old grenade to explode
+    if(Grenade:isValid()){ exit() }
+    
+    Grenade = Entity
+}
+
+event tick()
+{
+    if(!Grenade:isValid()){ exit() }
+    
+    const Who = Grenade:owner()
+    
+    const Direction = ( (Who:boxCenterW() - Grenade:boxCenterW()):normalized() ) * 10
+    Prop:setPos(Grenade:boxCenterW() - Direction)
+}
