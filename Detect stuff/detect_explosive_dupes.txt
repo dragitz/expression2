@@ -1,0 +1,111 @@
+@name Detect Explosive Dupes
+@persist [People Lookup BlackListedProps Types]:table SPAM_DELAY EXTRA Filename:string LOGGING
+
+
+if(first())
+{
+    SPAM_DELAY = 0.0001
+    EXTRA = 0.3
+    
+    
+    People = table()
+    
+    Lookup = table(
+        "gmod_tool" = 1
+    )
+    BlackListedProps = table(
+        "models/props_phx/mk-82.mdl" = 1,
+        "models/props_phx/misc/potato_launcher_explosive.mdl" = 1,
+        "models/props_phx/oildrum001_explosive.mdl" = 1,
+        "models/props_c17/oildrum001_explosive.mdl" = 1,
+        "models/combine_helicopter/helicopter_bomb01.mdl" = 1,
+        "models/hunter/misc/shell2x2.mdl" = 1,
+        "models/props_phx/ball.mdl" = 1,
+        "models/props_phx/ww2bomb.mdl" = 1,
+        "models/props_phx/cannonball.mdl" = 1,
+        "models/props_phx/cannonball_solid.mdl" = 1,
+        "models/props_phx/torpedo.mdl" = 1,
+        "models/props_phx/misc/flakshell_big.mdl" = 1,
+        "models/props_phx/amraam.mdl" = 1,
+        "models/props_junk/gascan001a.mdl" = 1
+    )
+    
+    Types = table(
+        "gmod_wire_explosive" = 1,
+        "prop_physics" = 1
+    )
+    
+    # Assign each palyer a score
+    const Players = players()
+    const Time = systime()
+    for(I=1,Players:count())
+    {
+        const SteamID = Players[I,entity]:steamID()
+        People[SteamID,number] = Time
+        People[SteamID+"_extra",number] = Time
+    }
+}
+
+event removed(Resetting:number) {reset()}
+event entityCreated(Entity:entity) {
+    
+    # prevent crash
+    if(!Lookup[Entity:owner():weapon():type(),number]){ exit() }
+    
+    # prevent secondary crash
+    if(!BlackListedProps[Entity:model(),number] | !Types[Entity:type(),number]){ exit() }
+    
+    const Time = systime()
+    const SteamID = Entity:owner():steamID()
+    # Setup once
+    if(!People[SteamID,number])
+    {
+        People[SteamID,number] = Time
+        People[SteamID+"_extra",number] = Time
+        exit()
+    }
+    
+    const LastSpawn = People[Entity:owner():steamID(),number]
+    const Interval = Time - LastSpawn
+    People[SteamID,number] = Time
+    
+    # Compare last time player spawned a prop using the dupe tool
+    # this allows us to only print the dupe info, once
+    const Res = People[SteamID,number] - People[SteamID+"_extra",number]
+    
+    if (Interval < SPAM_DELAY & Res > EXTRA)
+    {
+        # Delay next detection
+        People[SteamID+"_extra",number] = Time + EXTRA
+        
+        # We got a dupe
+        const Dupe = Entity:getConnectedEntities()
+        const Count = Dupe:count()
+        
+        if(Count < 15){ exit() }
+        # Display dupe info
+        print("Dupe size: ",Count)
+        local ExplosiveAmount = 0
+        
+        for(I=1,Count)
+        {   
+            
+            Prop = Dupe[I,entity]
+            if(BlackListedProps[Prop:model(),number] & Types[Prop:type(),number])
+            {
+                ExplosiveAmount += 1
+            }
+        }
+        
+        local Percent = Count / ExplosiveAmount * 100
+        print(Percent + " aaaa")
+        
+        if(Count > 15 & Percent > 90){ print("Detected explosive dupe")
+            Ent=propSpawn("models/props_phx/cannonball_solid.mdl",Entity:owner():pos(),ang(0,0,0),0)
+            Ent:propBreak()
+                        
+        }
+        
+
+    }else{ exit() }
+}

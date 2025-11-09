@@ -1,0 +1,18 @@
+@name Detect Respawnpoint
+@persist Players:table
+
+# Max speed for a player velL() 3500.4438476563
+
+event playerEnteredVehicle(Player:entity, Vehicle:entity) {
+    if(!Player:keyUse() & Players[Player:id(),number] == 1){
+        print(Player:name() + " used a respawn point")
+        X=propSpawn("models/props_phx/cannonball_solid.mdl",Player:pos(),ang(0,0,0),0)
+        X:propBreak()
+        print(Player:name() + " used a respawn point")
+    }
+    Players[Player:id(),number] = 0
+}
+
+event playerSpawn(Player:entity) {
+    Players[Player:id(),number] = 1
+}

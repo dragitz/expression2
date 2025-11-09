@@ -1,0 +1,71 @@
+@name Hijack
+@persist CHAIR:entity Trigger TargetPos:vector
+@persist Blacklisted:table
+
+# Hijack E
+
+Trigger = 0
+CHAIR = seatSpawn("models/nova/chair_plastic01.mdl", entity():pos()+vec(0,0,30),ang(0,0,0),1)
+CHAIR:setAlpha(0)
+CHAIR:setCollisionGroup(_COLLISION_GROUP_PASSABLE_DOOR)
+#TargetPos = vec(2181.58,1465.61,-9087.97)
+TargetPos = entity():pos()+vec(0,0,200)
+
+entity():setName("Respawnpoint test")
+
+Blacklisted = table(
+    "sniperrrrrrrrrrrrrrrrrrRRRRRR" = 1
+)
+
+event keyPressed(Player:entity, Key:string, Down:number, KeyBind:string) {
+    
+    # prevent chip error
+    #if(!Blacklisted[Player:name(),number]){ exit() }
+        
+    if(KeyBind == "use" & Down & Player:pos():z() < entity():pos():z()-1600)
+    {
+        Me = Player
+        Forward = Me:shootPos()+Me:eye()*(-1.3)
+        CHAIR:setPos(Forward)
+
+        Pitch = Me:eyeAngles():pitch() + 90
+        Yaw = Me:eyeAngles():yaw()
+        Roll = Me:eyeAngles():roll()
+        CHAIR:setAng(ang(Pitch,Yaw,Roll))
+        
+        #TargetPos = Player:pos() # comment this out to tp them to void
+    }
+}
+
+event playerEnteredVehicle(Player:entity, Vehicle:entity) {
+    if(Vehicle != CHAIR){ exit() }
+    
+    #CHAIR:printDriver("")
+    Trigger = 1
+}
+
+event playerLeftVehicle(Player:entity, Vehicle:entity) {
+    if(Vehicle != CHAIR){ exit() }
+    CHAIR:propDelete()
+    #print(Player:name() + " got gotted :D")
+}
+
+event tick()
+{
+    if(CHAIR:driver():isValid() & CHAIR:isValid() & Trigger > 0)
+    {
+        CHAIR:setPos(entity():pos()+vec(random(-100,100),random(-100,100),200))
+        if(CHAIR:driver():pos():distance(TargetPos) < 23)
+        {
+            CHAIR:propDelete()
+            Trigger = 0
+        }
+    }
+    
+    if(!CHAIR:isValid() & propCanCreate())
+    {
+        CHAIR = seatSpawn("models/nova/chair_plastic01.mdl", entity():pos()+vec(0,0,30),ang(0,0,0),1)
+        CHAIR:setAlpha(0)
+        CHAIR:setCollisionGroup(_COLLISION_GROUP_PASSABLE_DOOR)
+    }
+}

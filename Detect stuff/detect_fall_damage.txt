@@ -1,0 +1,29 @@
+@name Detect fall damage
+
+@persist MinVel Reset
+
+Reset  = 0
+MinVel = 512
+event entityDamage(Victim:entity, Damage:damage) {
+    print(Victim:velL():length())
+    
+    Victim:plySetHealth(100)
+    
+    Reset = 1
+    
+}
+
+event removed(Resetting:number) {print(MinVel)}
+
+event tick()
+{
+    if(Reset)
+    {
+        owner():plySetPos(entity():pos()+vec(0,0,10))
+        owner():plyApplyForce(vec(0,0,-MinVel))
+        
+        Reset = 0
+        MinVel--
+    }
+    
+}

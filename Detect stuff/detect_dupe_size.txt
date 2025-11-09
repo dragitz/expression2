@@ -1,0 +1,75 @@
+@name Detect dupe size
+@persist People:table BLOCKSPAMMERDELAY
+@persist [MinVec MaxVec]:vector
+
+if(first())
+{
+    People = table()
+    
+    BLOCKSPAMMERDELAY = 0.0001
+    
+    MinVec = vec(99999,99999,99999)
+    MaxVec = vec(0,0,0)
+    
+    holoCreate(1)
+    holoCreate(2)
+    
+    holoColor(1,vec(255,0,0))
+    holoColor(2,vec(0,255,0))
+    
+    function void updateVec(Entity:entity)
+    {
+        #[
+        if(Entity:pos():x() < MinVec:x()){ MinVec[1,number] = Entity:pos():x()}
+        if(Entity:pos():y() < MinVec:y()){ MinVec[2,number] = Entity:pos():y()}
+        if(Entity:pos():z() < MinVec:z()){ MinVec[3,number] = Entity:pos():z()}
+        
+        if(Entity:pos():x() > MaxVec:x()){ MaxVec[1,number] = Entity:pos():x()}
+        if(Entity:pos():y() > MaxVec:y()){ MaxVec[2,number] = Entity:pos():y()}
+        if(Entity:pos():z() > MaxVec:z()){ MaxVec[3,number] = Entity:pos():z()}
+        ]#
+        
+        
+        local Pos = Entity:boxCenterW() - Entity:boxMin()
+        if (Pos:x() < MinVec:x() & Pos:y() < MinVec:y() & Pos:z() < MinVec:z())
+        { 
+            MinVec = Pos
+        }
+        
+        Pos = Entity:boxCenterW() + Entity:boxMax()
+        if (Pos:x() > MaxVec:x() & Pos:y() > MaxVec:y() & Pos:z() > MaxVec:z())
+        { 
+            MaxVec = Pos
+        }
+        
+        
+    }
+}
+event keyPressed(Player:entity, Key:string, Down:number, KeyBind:string) {
+    if(Down & KeyBind == "attack" & Player:tool() == "duplicator" & !Player:isTyping())
+    {
+        MinVec = vec(999999,999999,999999)
+        MaxVec = vec(-999999,-999999,-999999)
+    }
+}
+event entityCreated(Entity:entity) {
+    
+    local LastSpawn = People[Entity:owner():steamID(),number]
+    local Interval = curtime() - LastSpawn
+    
+    People[Entity:owner():steamID(),number] = curtime()
+
+    updateVec(Entity)
+    if (Interval < BLOCKSPAMMERDELAY)
+    {
+        #LastDupeSpawn = curtime()
+        
+    }
+    
+}
+
+event tick()
+{
+    holoPos(1,MinVec)
+    holoPos(2,MaxVec)
+}

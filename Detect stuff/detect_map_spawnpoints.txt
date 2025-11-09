@@ -1,0 +1,17 @@
+@name detect map spawnpoints
+@persist SP:table
+
+SP = table()
+event playerSpawn(Player:entity) {
+    if(!SP[Player:pos():toString(),number])
+    {
+        SP[Player:pos():toString(),number] = 1
+    }
+}
+
+event chat(Player:entity, Message:string, Team:number) {
+    if(Message == "!show")
+    {
+        printTable(SP)
+    }
+}

@@ -1,0 +1,87 @@
+@name Detect potential spawnkills
+@persist [AliveTable SpawnKilledTable]:table MIN_SCORE
+
+#[
+    We store in a table the amount of time a player has been alive since its last respawn
+]#
+
+    #Cube = propSpawn("models/hunter/blocks/cube2x2x2.mdl",entity():pos()+vec(0,0,20),1)
+    #Cube:setCollisionGroup(_COLLISION_GROUP_PASSABLE_DOOR)
+    
+    #Cube:setAlpha(0)
+    #Cube:propShadow(0)
+    
+    #if(!Cube:isValid()){print("Cube isn't valid, please respawn chip!"), selfDestructAll()}
+
+#[
+event tick()
+{
+    
+    Keys = SpawnKilledTable:keys()
+    #print(Keys)
+    for(I=1,Keys:count())
+    {
+        Key = Keys[I,number]
+        if(SpawnKilledTable[Key,number] >= 3)
+        {
+            Player = entity(Key)
+            Cube:setPos(Player:pos()+vec(0,0,10))
+        }
+    }
+}
+]#
+
+MIN_SCORE = 2
+if(first())
+{
+    
+    Time = systime()
+    Players = players()
+    
+    for(I=1,Players:count())
+    {
+        Key = Players[I,entity]:id()
+        AliveTable[Key,number] = Time
+        SpawnKilledTable[Key,number] = 0
+    }
+}
+event playerConnected(Player:entity) {
+    AliveTable[Player:id(),number] = systime()
+    SpawnKilledTable[Key,number] = 0
+}
+
+event playerDeath(Victim:entity, Inflictor:entity, Attacker:entity) {
+    # Check the player's alive time
+    Time = systime()
+    Key = Victim:id()
+    TimeDiff = Time - AliveTable[Key,number]
+    
+    
+    # Detect potential spawn kill
+    if(TimeDiff < 1)
+    {
+        # Increase score
+        SpawnKilledTable[Key,number] = SpawnKilledTable[Key,number] + 1
+        
+        # Check if vistim has died at least x times
+        if(SpawnKilledTable[Key,number] >= MIN_SCORE)
+        {
+            local Model = Inflictor:model()
+            local TrueAttacker = Inflictor:owner()
+            print(Victim:name() + " is being spawnkilled by > ", TrueAttacker:name() + "    model: "+Model)
+        }
+        
+    }else
+    {
+        # Victim has not been spawnkilled, decrease score by 1
+        if(SpawnKilledTable[Key,number] > 0){ SpawnKilledTable[Key,number] = SpawnKilledTable[Key,number] - 1}
+    }
+    
+    #print(TimeDiff, "   Score: ", SpawnKilledTable[Key,number])
+     
+    
+}
+
+event playerSpawn(Player:entity) {
+    AliveTable[Player:id(),number] = systime()
+}

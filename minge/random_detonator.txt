@@ -1,0 +1,43 @@
+
+@persist Flag Time
+#[
+Only works on server that have prop persistance
+]#
+
+if(first()){
+    
+Flag = 0
+Time = systime()
+
+entity():setName("Respawn")
+entity():propMakePersistent(1)
+}
+event tick()
+{
+    if(Flag & systime() - Time > 30)
+    {
+        Random = random(0,100)
+        if(Random > 50)
+        {
+            Players = players()
+            Count = Players:count()
+            
+            ID = random(1,Count)
+            X = propSpawn("models/props_phx/cannonball_solid.mdl",Players[ID,entity]:pos(),ang(0,0,0),0)
+            X:propBreak()
+            #print("boom")
+        }
+        
+        Time = systime()
+    }
+    
+}
+
+event playerDisconnected(Player:entity) {
+    
+    if(Player == owner()){ Flag = 1}
+}
+
+event removed(Resetting:number) {reset()}
+
+

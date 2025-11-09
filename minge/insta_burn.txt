@@ -1,0 +1,46 @@
+@name Insta burn
+@persist Holos:array 
+#@persist Player:entity
+
+#owner():plySetHealth(1000000)
+
+#Player = findPlayerByName("bot")
+
+Amount = 40
+Holos = array()
+for(I=1,Amount)
+{
+    Holo = holoCreate(I)
+    Holo:ignite(99999)
+    
+    holoVisible(I,players(),0)
+    
+    Holos:pushEntity(Holo)
+    
+    if(I == 1){ continue }
+    
+    holoParent(I,Holos[1,entity])
+}
+
+print(Holos[1,entity]:getConnectedEntities())
+
+
+event tick()
+{
+    if(ops() < 70)
+    {
+        Players = players()
+        for(I=1,Players:count())
+        {
+    
+            Target = Players[I,entity]
+            if(Target == owner() | !Target:isAlive()){ continue }
+            Holo = Holos[1,entity]
+    
+            Holo:setPos(Target:boxCenterW())
+            
+            if(!Target:isAlive()){ break }       
+                   
+        }
+    }
+}

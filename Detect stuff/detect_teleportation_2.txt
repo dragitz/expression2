@@ -1,0 +1,40 @@
+@name detect teleportation 2
+@persist Info:table
+
+if(first())
+{
+    Info = table()
+    foreach(_:number, Player:entity = players())
+    {
+        Info[Player:steamID64(),vector] = Player:pos()
+    }
+}
+
+event tick()
+{
+    foreach(_:number, Player:entity = players())
+    {
+        const Steam = Player:steamID64()
+        const Prev = Info[Steam,vector]
+        Info[Steam,vector] = Player:pos()
+        
+        const Distance = Prev:distance(Info[Steam,vector])
+        
+        # with this current setup, a speed above 54 could be considered a tp
+        if(Distance > 150 & Player:inVehicle())
+        { 
+            print("tp! --> "+Player:name())
+            
+        }
+    }
+}
+
+# respawns are not considered to be teleport
+event playerSpawn(Player:entity) {
+    Info[Player:steamID64(),vector] = Player:pos()
+}
+
+# log new players
+event playerConnected(Player:entity) {
+    Info[Player:steamID64(),vector] = Player:pos() ?: vec(0,0,0)
+}

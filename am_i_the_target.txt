@@ -1,0 +1,37 @@
+@name Am I the target?
+
+@persist Commands:table
+@strict
+
+if(first() | duped())
+{
+    Commands = table(
+        "." = 1,
+        "!" = 1,
+        "/" = 1,
+        "#" = 1
+    )
+}
+
+event chat(Player:entity, Message:string, Team:number) {
+    
+    const IsCommand = Commands[Message:explode("")[1,string],number]
+    if(IsCommand)
+    {
+        const Exploded = Message:explode(" ")
+        
+        # Ensure we don't randomly target invalid things
+        if(Exploded[2,string] != "")
+        {
+            # Usually target player is in second position
+            PotentialTarget = findPlayerByName(Exploded[2,string])
+            
+            
+            if(PotentialTarget == owner())
+            {
+                print("You have been targeted by: "+Player:name(), "   CMD: ", Message)
+            }
+        }
+    }
+    
+}

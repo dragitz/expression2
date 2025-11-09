@@ -1,0 +1,24 @@
+@name holo cosine
+@persist Player:entity Prop:entity
+
+if(first())
+{
+Player = findPlayerByName("manners")
+#Prop = propSpawn("models/hunter/blocks/cube075x075x075.mdl",Player:pos()+vec(0,0,Player:height()+19),0)
+Prop = entity():isWeldedTo()
+Prop:setPos(Player:pos()+vec(0,0,Player:height()+19))
+
+#Prop:setAlpha(0)
+#Prop:setPos(Player:pos()+vec(0,0,Player:height()+20))
+Prop:setMass(_INF)
+}
+event playerDeath(Victim:entity, Inflictor:entity, Attacker:entity) {
+    if(Victim == Player)
+    {
+        Prop:propDelete()
+        selfDestructAll()
+    }
+}
+
+
+

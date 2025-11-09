@@ -1,0 +1,190 @@
+@name Killer finder (pattern)
+
+@persist [Me LastPlayerThatUsedTheAdvDupe]:entity
+@persist Suspects:table
+
+@persist Time
+
+@outputs DEBUG:string
+#[
+    Keep track of key presses and when they have been pressed
+        - Keep track of their last 5 inputs
+        
+    Correlate them with a death time
+    
+    A relation between the two of them should be about ~100ms (at most)
+    
+    If a time is correlated with a death, then we may have out attacker list
+]#
+
+#[
+
+2     gmod_wire_target_finder
+1     gmod_wire_teleporter
+10    gmod_dynamite
+10    env_explosion
+
+]#
+
+if(first())
+{
+    # initiate table of suspects
+    Suspects = table()
+    
+    Players = players()
+    for(I=1,Players:count())
+    {
+        # ignore ourselfs
+        #if(Players[I,entity] == owner()){ continue }
+        
+        local Table = table(
+            Players[I,entity]:name() = table(
+            "Score" = 0,
+            "LastKeyPress_Time" = 0,
+            "LastKeyPress_Key" = "",
+            "LastKeyPress_KeyBind" = ""
+            )
+        )
+        Suspects=Suspects:add(Table)       
+    }
+    
+    print("spawned")
+    printTable(Suspects)
+}
+
+event playerConnected(Player:entity) {
+    #local Table = table(Player:name() = table())
+    #Suspects:pushTable(Table)
+    
+    
+    local Table = table(
+        Player:name() = table(
+        "Score" = 0,
+        "LastKeyPress_Time" = 0,
+        "LastKeyPress_Key" = "",
+        "LastKeyPress_KeyBind" = ""
+        )
+    )
+    Suspects=Suspects:add(Table)
+    
+}
+
+
+event entityCreated(Entity:entity) {
+    
+    Score = 0
+    
+    Owner = Entity:owner()
+    
+    # In case we do not have an owner, we use whoever last used the adv. duplicator
+    if(!Owner:isValid() || !Owner:isPlayer())
+    {
+        # In case we do not have LastPlayerThatUsedTheAdvDupe set, we simply sus everyone who is holding the tool
+        if(LastPlayerThatUsedTheAdvDupe:isValid() & LastPlayerThatUsedTheAdvDupe:isPlayer())
+        {
+            Owner = LastPlayerThatUsedTheAdvDupe
+        }else
+        {
+            # to be implemented...
+        }
+    }    
+    
+    switch(Entity:type())
+    {
+        case "gmod_wire_target_finder",
+            Score = 3
+            break
+        case "gmod_wire_teleporter",
+            Score = 1
+            break
+        case "gmod_dynamite",
+            Score = 10
+            break
+        case "env_explosion",
+            Score = 10
+            break        
+    }
+    Suspects[Owner:name(),table]["Score",number] = Suspects[Owner:name(),table]["Score",number] + Score
+
+}
+
+event keyPressed(Player:entity, Key:string, Down:number, KeyBind:string) {
+
+    if(Down)
+    {
+        switch (Key) {
+            case "pad_1",
+            case "pad_2",
+            case "pad_3",
+            case "pad_4",
+            case "pad_5",
+            case "pad_6",
+            case "pad_7",
+            case "pad_8",
+            case "pad_9",
+            print(Player:name() + " pressed "+Key)
+            break
+            
+            default,
+                
+        }
+
+        Time = floor(curtime())
+        
+        Suspects[Player:name(),table]["LastKeyPress_Time",number] = Time
+        Suspects[Player:name(),table]["LastKeyPress_Key",string] = Key
+        Suspects[Player:name(),table]["LastKeyPress_KeyBind",string] = KeyBind
+    }
+}
+
+event tick()
+{    
+    if(ops() < 50 & perf())
+    {
+        DEBUG = Suspects:toString()
+    }
+}
+
+event playerDeath(Victim:entity, Inflictor:entity, Attacker:entity) {
+    
+    Players = players()
+    VictimPos = Victim:pos()
+    
+    PotentialAttacker = noentity()
+    
+    if(!Attacker:isValid() & Attacker:isPlayer())
+    {
+        # Find who's aiming at the victim
+        for(I=1,Players:count())
+        {
+            PosCheck = Players[I,entity]:shootPos() + Players[I,entity]:eye() * Players[I,entity]:pos():distance(VictimPos)
+            
+            # NOTE: this causes some inaccuracies, as multiple players may be looking at that victim and only one player is returned
+            # NOTE: also the attacker might have quickly changed its orientation, which bypasses that
+            # FINAL NOTE: use a list
+            if(PosCheck:distance(VictimPos) < 70 & Players[I,entity]:isAlive() & Players[I,entity] != Victim)
+            {
+                PotentialAttacker = Players[I,entity]
+                break
+            }
+        }
+        
+        # In case we don't have any potential Attacker
+        if(!PotentialAttacker:isValid())
+        {
+            # Use key press method
+            
+        }else{
+            
+            print(PotentialAttacker:name() + " may have killed "+Victim:name())
+        }
+        
+    }
+    
+}
+
+
+
+
+
+

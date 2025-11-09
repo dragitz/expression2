@@ -1,0 +1,56 @@
+@name detect jails
+@persist Arr:table
+
+Arr = table()
+
+event entityCreated(Entity:entity) {
+    
+    Model = Entity:type()
+    
+    #print(Model)
+    
+    if(!Arr:exists(Model))
+    {
+        Arr[Model,number] = 1
+    }
+    else
+    {
+        Arr[Model,number] = Arr[Model,number] + 1
+    }
+    
+    
+    
+}
+
+
+event chat(Player:entity, Message:string, Team:number) {
+    
+    if(Message == "!show")
+    {
+        local Top = 0
+        local Keys = Arr:keys()
+        
+        local TopKey = ""
+        
+        Final = array()
+        # Find the highest prop in common that jails have
+        for(I=1,Arr:count())
+        {
+            Key = Keys[I,string]
+            
+            if(Arr[Key,number] >= 5)
+            {
+                Top = Arr[Key,number]
+                TopKey = Key
+                
+                Final:pushString(Key)
+            }
+        }
+        
+        # Print the matches
+        for(I=1,Final:count())
+        {
+            print(Final[I,string])
+        }
+    }
+}

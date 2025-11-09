@@ -1,0 +1,57 @@
+@name Anti Prop Spam
+@persist People:table BLOCKSPAMMERDELAY Target:entity
+
+if(first())
+{
+    People = table()
+    
+    #BLOCKSPAMMERDELAY = 0.11
+    BLOCKSPAMMERDELAY = 0.37
+}
+event entityCreated(Entity:entity) {
+    
+    # Owner must be valid
+    if(!Entity:owner():isValid()) { exit() }
+    
+    
+    
+    if(!People[Entity:owner():steamID(),number])
+    {
+        People[Entity:owner():steamID(),number] = curtime()
+        exit()
+    }
+    
+    local LastSpawn = People[Entity:owner():steamID(),number]
+    local Interval = curtime() - LastSpawn
+    
+    People[Entity:owner():steamID(),number] = curtime()
+    
+    #print(Interval)
+    
+    # If player spams, it goes boom. Ignores dupes
+    if (Interval < BLOCKSPAMMERDELAY)
+    {
+        Target = Entity:owner()
+    }
+    
+}
+
+event tick()
+{
+    if(Target:isValid())
+    {
+
+        #Ea=propSpawn("models/props_phx/cannonball_solid.mdl",owner():pos(),ang(0,0,0),1)
+        #Ea:propBreak()
+        
+        print(Target:name() + " is spamming props!")
+        
+        if(!Target:isAlive()){ Target = noentity() }
+        
+        Target = noentity()
+    }
+    
+    
+    
+    
+}

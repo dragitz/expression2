@@ -1,0 +1,362 @@
+@name Detect Abusive Kills
+@persist [Data SpawnedProps KillData]:table CurrentTick Time
+
+#[
+    spawnkillers or contraptions that constantly kill a player without giving them a chance to fight back
+]#
+
+if(first())
+{
+    Time = curtime()
+    CurrentTick = 0
+        
+    Data = table(
+        "prop_physics" = 1
+    )
+    
+    SpawnedProps = table() # holds props that have been spawned in a specific tick
+  
+    KillData = table()
+    #[
+        TABLE FORMAT:
+        
+        "STEAM_ID" = table(
+            "KNOWN_AS" = table(
+                "xX_Something_Xx" = 1,
+                "UsernameGuy111" = 1
+            )
+            "KILL_TICKS" = 1,
+            "KILL_TICKS_RECORD" = 1,
+            "INSTA_KILLS" = 1,
+            "VEHICLE_KILLS" = 1234, # <-- how many times player killed while driving
+            "LAST_KEY_PRESS" = "",   # <-- used to log in BUTTON_PRESSES
+            "PLAYERS_KILLED" = table(
+                "VICTIM_STEAM_ID" = 1234 # <-- amount
+            ),
+            "ENT_TYPES" = table(
+                "ENTITY_TYPE" = 1234 # <-- total kills with a specific type
+            ),
+            "WEAPONS_USED" = table(
+                "WEAPON_TYPE" = 1234 # <-- total kills with that weapon
+            ),
+            "BUTTON_PRESSES" = table(
+                "attack" = 1234
+            )
+        )
+    ]#
+}
+
+event tick()
+{
+    CurrentTick++
+    if(CurrentTick >= 50000){ CurrentTick = 0, print("tick reset"), SpawnedProps = table()}
+    
+    
+    local Compare = curtime()
+    if(Compare - Time >= 4) # 3 seconds may seem a lot, but it SLOWLY builds up over time
+    {
+        Time = Compare
+        
+        const Keys = KillData:keys()
+        for(I=1,Keys:count())
+        {
+            local Value = KillData[Keys[I,string],table]["KILL_TICKS",number]
+            if(Value > 0)
+            {
+                KillData[Keys[I,string],table]["KILL_TICKS",number] = Value - 1
+            }
+            
+        }
+    }
+    
+    # debug
+    #print(KillData[owner():steamID64(),table]["KILL_TICKS",number])
+}
+
+
+event entityCreated(Entity:entity) {
+
+    # entities can kill, but it's uncommon
+    if(!Data[Entity:type(),number]){ exit() }
+    
+    if(!SpawnedProps[CurrentTick,table])
+    {
+        #print("Table did not exist on tick: ",CurrentTick)
+        SpawnedProps[CurrentTick,table] = table()
+    }
+    
+    const OWNER = Entity:owner()
+    const STEAM_ID = OWNER:steamID64()
+    const Pos   = Entity:pos()
+    
+    SpawnedProps[CurrentTick,table][OWNER:name()+"_"+STEAM_ID,vector] = Pos
+
+    #printTable(SpawnedProps)
+    #print("Prop: ",Entity, "    ",CurrentTick)
+}
+
+event playerDeath(Victim:entity, Inflictor:entity, Attacker:entity) {
+    
+    if(!Victim:isPlayer()){ print("WTF?"), exit() }
+    
+    # PVP kill / Weapon kill (I'm not interested in normal kills)
+    if(Inflictor == Attacker && Inflictor:isPlayer()){ exit() }
+    if(Inflictor:isWeapon() && Attacker:isPlayer()){ exit() }
+    
+    # Check for null kills
+    if(!Inflictor:isValid() && !Attacker:isValid())
+    {
+        #print("(null) kill detected. checking spawed props near guy.  ",CurrentTick)
+        
+        const MAX_CHECK_TICKS = 10
+        local FOUND_SUS = 0
+        
+        for(TICK=1,MAX_CHECK_TICKS)
+        {
+            const KeysTickBefore = SpawnedProps[CurrentTick - TICK,table]:keys()
+            const KeyCount = KeysTickBefore:count()
+            if(KeyCount <= 0){ continue }
+            
+            for(I=1,KeyCount)
+            {
+                const CURRENT_STEAM_ID = KeysTickBefore[I,string]
+                const Pos = SpawnedProps[CurrentTick - TICK,table][CURRENT_STEAM_ID,vector]
+                const Distance = Pos:distance(Victim:pos())
+                if(Distance < 100)
+                {
+                    print(CURRENT_STEAM_ID, " is sus. Victim:",Victim:name(), "("+ TICK+ " ticks before kill)")
+                    FOUND_SUS += 1
+                }                
+            }
+            
+        }
+        
+        #[
+        if(!FOUND_SUS)
+        {
+            if(findCanQuery())
+            {
+                # if the Attacker deletes the prop upon playerDeath, this will never work
+                # this will trigger when propkilling
+                findInSphere(Victim:pos(),100)
+                local Array = findToArray()
+                for(I=1,Array:count())
+                { 
+                    local Ent = Array[I,entity]
+                    if(Ent:isPlayer()){ continue }
+                    
+                    if(curtime() - Ent:creationTime() > 100){ continue }
+                    
+                    print("unfinished code")
+                    
+                    
+                }
+            }else{
+                # No spawned props were used to kill on previous tick! 
+                print("Fall damage/Suicide death: "+Victim:name(),"Tick:" ,CurrentTick)
+                exit()
+            }
+
+        }
+        ]#
+        # Since it's a (null) kill without props associated, we don't have enough info about it
+        # don't log it
+        
+        # NOTE: checking aimPos of all players could be an indicator
+        # NOTE: they may be using an egp menu to kill from a distance, rendering aimPos useless
+        # NOTE: Delaying a kill can avoid detection from ticks
+        #      (eg. last players who pressed a button in the last X ticks of death)
+        #      People aren't clever in hiding this type of behaviour, but I'm going to assume so
+        exit()
+    }
+    
+    
+
+    
+    # Was it instakill?
+    const Dist = Inflictor:owner():pos():distance(Victim:pos()) # dist of 700 I think should be enough
+    local INSTA_KILL_FLAG = 0
+    if(curtime() - Inflictor:creationTime() < 0.11 & Dist > 750) #  & Inflictor:owner():isPlayer()
+    {
+        #print("potential instakill by: "+Inflictor:owner():name(), Inflictor:type())
+        INSTA_KILL_FLAG = 1
+        
+    }
+    
+    
+    #[ 
+        From here things start to get interesting
+    ]#
+    local PotentialAttacker = noentity()
+    if(!Attacker:isPlayer())
+    {
+        const InflictorOwner = Inflictor:owner()
+        if(!InflictorOwner:isPlayer())
+        {
+            const ConnectedEnts = Inflictor:getConnectedEntities()
+            
+            for(I=1,ConnectedEnts:count())
+            {
+                PotentialAttacker = ConnectedEnts[I,entity]:owner()
+                
+                if(PotentialAttacker:isPlayer()){ break }
+            }
+            if(PotentialAttacker:isPlayer())
+            { 
+                #print("Victim:",Victim, "killed by:", PotentialAttacker:name(), "using:", Inflictor:type())
+            }
+            else
+            {
+                print("Couldn't figure out who killed the player! Victim: ",Victim, " Inflictor:", Inflictor)
+                exit()
+            }
+            
+        }
+        
+        # Extra check
+        const PotentialAttacker_2 = InflictorOwner
+        if(!PotentialAttacker:isPlayer() & InflictorOwner:isPlayer())
+        {
+            PotentialAttacker = PotentialAttacker_2
+        }
+        
+    }else
+    {
+        PotentialAttacker = Attacker
+    }
+    
+    if(!PotentialAttacker:isPlayer())
+    {
+        print("Couldn't figure out PotentialAttacker for Victim:",Victim)
+        exit()
+    }
+    
+    # Log in killData
+    const OWNER_STEAMID = PotentialAttacker:steamID64()
+    
+    if(OWNER_STEAMID:length() > 3)
+    {
+        # Init player table
+        if(!KillData[OWNER_STEAMID,table]){
+            
+            KillData[OWNER_STEAMID,table] = table()
+            KillData[OWNER_STEAMID,table]["KNOWN_AS",table] = table()
+            KillData[OWNER_STEAMID,table]["KILL_TICKS",number] = 0
+            KillData[OWNER_STEAMID,table]["KILL_TICKS_RECORD",number] = 0
+            KillData[OWNER_STEAMID,table]["INSTA_KILLS",number] = 0
+            KillData[OWNER_STEAMID,table]["VEHICLE_KILLS",number] = 0
+            KillData[OWNER_STEAMID,table]["LAST_KEY_PRESS",string] = "test"
+            KillData[OWNER_STEAMID,table]["PLAYERS_KILLED",table] = table()
+            KillData[OWNER_STEAMID,table]["ENT_TYPES",table] = table()
+            KillData[OWNER_STEAMID,table]["WEAPONS_USED",table] = table()
+            KillData[OWNER_STEAMID,table]["BUTTON_PRESSES",table] = table()
+        }
+        
+        # Data
+        local KillTicks = KillData[OWNER_STEAMID,table]["KILL_TICKS",number]
+        local KillTicks_RECORD = KillData[OWNER_STEAMID,table]["KILL_TICKS_RECORD",number]
+        KillData[OWNER_STEAMID,table]["KILL_TICKS",number] = KillTicks + 1
+        
+        if(KillTicks + 1 > KillTicks_RECORD)
+        {
+            KillData[OWNER_STEAMID,table]["KILL_TICKS_RECORD",number] = KillData[OWNER_STEAMID,table]["KILL_TICKS",number]
+        }
+        
+        # debug check
+        if(KillTicks >= 10)
+        {
+            print("DBG: "+KillTicks,PotentialAttacker)
+        }
+        
+        KillData[OWNER_STEAMID,table]["KNOWN_AS",table][PotentialAttacker:name(),number] = 1
+        
+        local InstaKills = KillData[OWNER_STEAMID,table]["INSTA_KILLS",number] + INSTA_KILL_FLAG
+        KillData[OWNER_STEAMID,table]["INSTA_KILLS",number] = InstaKills
+        
+        if(PotentialAttacker:inVehicle())
+        {
+            KillData[OWNER_STEAMID,table]["VEHICLE_KILLS",number] = KillData[OWNER_STEAMID,table]["VEHICLE_KILLS",number] + 1
+        }
+        
+        if(!KillData[OWNER_STEAMID,table]["PLAYERS_KILLED",table][Victim:steamID64(),number])
+        {
+            KillData[OWNER_STEAMID,table]["PLAYERS_KILLED",table][Victim:steamID64(),number] = 1
+        }
+        else
+        {
+            local Value = KillData[OWNER_STEAMID,table]["PLAYERS_KILLED",table][Victim:steamID64(),number]
+            KillData[OWNER_STEAMID,table]["PLAYERS_KILLED",table][Victim:steamID64(),number] = Value + 1
+        }
+        
+        # Prop or entity used to kill the victim
+        if(!KillData[OWNER_STEAMID,table]["ENT_TYPES",table][Inflictor:type(),number])
+        {
+            KillData[OWNER_STEAMID,table]["ENT_TYPES",table][Inflictor:type(),number] = 1
+        }
+        else
+        {
+            local Value = KillData[OWNER_STEAMID,table]["ENT_TYPES",table][Inflictor:type(),number]
+            KillData[OWNER_STEAMID,table]["ENT_TYPES",table][Inflictor:type(),number] = Value + 1
+        }
+        
+        # Weapon held at the time of kill
+        const CurrentWeaponType = PotentialAttacker:weapon():toString()
+        #print(CurrentWeaponType)
+        if(!KillData[OWNER_STEAMID,table]["WEAPONS_USED",table][CurrentWeaponType,number])
+        {
+            KillData[OWNER_STEAMID,table]["WEAPONS_USED",table][CurrentWeaponType,number] = 1
+        }
+        else
+        {
+            local Value = KillData[OWNER_STEAMID,table]["WEAPONS_USED",table][CurrentWeaponType,number]
+            KillData[OWNER_STEAMID,table]["WEAPONS_USED",table][CurrentWeaponType,number] = Value + 1
+        }
+    
+        # Last button pressed (not button pressed at time of kill)
+        # also it's not really the key press, but a keybind
+        const LastKeyPress = KillData[OWNER_STEAMID,table]["LAST_KEY_PRESS",string]
+        if(LastKeyPress != "test" & !KillData[OWNER_STEAMID,table]["BUTTON_PRESSES",table][LastKeyPress,number])
+        {
+            KillData[OWNER_STEAMID,table]["BUTTON_PRESSES",table][LastKeyPress,number] = 1
+        }
+        else
+        {
+            local Value = KillData[OWNER_STEAMID,table]["BUTTON_PRESSES",table][LastKeyPress,number]
+            KillData[OWNER_STEAMID,table]["BUTTON_PRESSES",table][LastKeyPress,number] = Value + 1
+        }
+    }else
+    {
+        print("Couldn't figure out steamID of attacker!")
+        print("Obj: ", Inflictor:type() , "  victim: ",Victim,"CurrentTick",CurrentTick)
+        exit()
+    }
+
+    print("Obj: ", Inflictor:type() , "  victim: "+Victim:name()," PotentialAttacker: "+PotentialAttacker:name(),"CurrentTick:"+CurrentTick)
+    
+    
+    # Logger
+    if(fileCanWrite())
+    {
+        JSON = jsonEncode(KillData,4)
+        fileWrite(">e2shared/KillDataLogger.txt",JSON)
+    }
+    
+    
+    #printTable(KillData)
+    
+    
+}
+
+
+#[
+event entityDamage(Victim:entity, Damage:damage) {
+    const Distance = Damage:getPosition():distance(Victim:pos() + vec(0,0,Victim:height()))
+    if(Distance < 18)
+    {
+        print("Headshot", Distance)
+    }
+} ]#
+
+
+
+

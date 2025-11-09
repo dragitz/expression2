@@ -1,0 +1,62 @@
+@name Kill spam detect
+@persist People:table SPAM_DELAY Target:entity
+
+if(first())
+{
+    People = table()
+    
+    #SPAM_DELAY = 0.19
+    SPAM_DELAY = 0.12
+}
+event playerDeath(Victim:entity, _:entity, Attacker:entity) {
+    
+    if(!Victim:isPlayer() | !Attacker:isPlayer()) { exit() }
+    
+    People[Victim:name(),number] = 10
+    
+    if(!People[Attacker:name(),number])
+    {
+        People[Attacker:name(),number] = curtime()
+        exit()
+    }
+    
+    local LastKill = People[Attacker:name(),number]
+    local Interval = curtime() - LastKill
+    
+    People[Attacker:name(),number] = curtime()
+    
+    
+    #print(Interval)
+    if (Interval < SPAM_DELAY)
+    {
+        Target = Attacker
+        print(Interval)
+        
+    }
+    
+}
+
+event playerSpawn(Player:entity) {
+    People[Player:name(),number] = 10
+    Player:plySetHealth(10)
+}
+
+event tick()
+{
+    if(Target:isValid() && Target:isAlive())
+    {
+
+        #Ea=propSpawn("models/props_phx/cannonball_solid.mdl",Target:pos(),ang(0,0,0),1)
+        #Ea:propBreak()
+        
+        print(Target:name() + " is spam killing!")
+        
+        if(!Target:isAlive()){ Target = noentity() }
+        
+        Target = noentity()
+    }
+}
+
+event removed(_:number) {
+    reset()
+}

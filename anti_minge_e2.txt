@@ -1,0 +1,82 @@
+@name Anti Minge E2
+@persist [People PeopleProps BlackListedProps BannedE2]:table
+
+if(first())
+{
+    BlackListedProps = table(
+        "gmod_wire_expression2" = 1
+    )
+    
+    People = table()
+    PeopleProps = table()
+    
+    BannedE2 = table(
+        "Chat killer by Hllm" = 1,
+        "Hyper AR2 by hamache" = 1,
+        "Jail with EGP" = 1,
+        "Nervegas" = 1,
+        "Player Blinder" = 1
+    )
+}
+
+
+#   ONLY WORKS ON DUPES
+
+event entityCreated(Entity:entity) {
+
+
+    # Thank you DeltaMolfar for telling me to use a lookup table to avoid chip crashes
+    if( !BlackListedProps[Entity:type(), number] ){ exit() }
+    
+    if( !BannedE2[Entity:getName(), number] ){ exit() }
+    
+    
+    
+    concmd("wire_expression_forcehalt "+Entity:id())
+    
+    print("\"" + Entity:getName() + "\" halted. Owner: "+Entity:owner():name() + " - SteamID: "+Entity:owner():steamID())
+    #const SteamID = Entity:owner():steamID()
+    #People[SteamID,entity] = Entity
+    #PeopleProps[SteamID,entity] = Entity
+    
+}
+
+
+event tick()
+{
+    
+    # You never know what could make the script "overheat"
+    # just in case something in the future breaks
+    if(perf(50) & People:count() > 0)
+    {
+        local Keys = People:keys()
+        
+        for(I=1,People:count())
+        {
+            Key = Keys[I,string]
+
+            if(!PeopleProps[Key,entity]:isValid()){ People:removeNumber(Key), PeopleProps:removeEntity(Key), continue}
+            
+            
+            # Kill if needed
+            Who = findPlayerBySteamID(Key)
+            
+            if(Who:isValid() & Who:isAlive() & Who:pos():isInWorld() & propCanCreate())
+            {
+                Ent=propSpawn("models/props_phx/cannonball_solid.mdl",Who:pos(),ang(0,0,0),0)
+                Ent:propBreak()
+                
+                print("E2 abuser "+Who:name()+" exploded, Reason: "+PeopleProps[Key,entity]:getName())
+            }
+        
+        }
+    }
+    
+}
+
+# In case it gets halted, must be removed and only admins can do that (or people with permissions)
+event removed(R:number) {
+    reset()
+}
+
+# Made by BIG MANNERS( STEAM_0:0:87011489 )

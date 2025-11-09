@@ -1,0 +1,39 @@
+@name detect fire kills
+@persist Lookup:table
+
+#entity():ignite(10.1)
+#owner():plySetHealth(0)
+
+Lookup = table(
+    "entityflame" = 1
+)
+
+event playerDeath(Victim:entity, Inflictor:entity, Attacker:entity) {
+    
+    if(!Lookup[Inflictor:type(),number]){ exit() }
+    
+    # E2 can not ignire invalid entities, therefore we try to get what is burning
+    # Generally speaking expression2 is coded to not allow entity functions to interact with invalid ones
+    # eg. not owned entities
+    local ConnectedProps = Inflictor:getConnectedEntities()
+    local ConnectedProp  = noentity()
+    
+    for(I=1,ConnectedProps:count())
+    {
+        if(ConnectedProps[I,entity] == Inflictor | ConnectedProps[I,entity]:isPlayer() | !ConnectedProps[I,entity]:isValid()){ continue }
+        
+        if(!ConnectedProps[I,entity]:isOnFire()){ continue }
+        ConnectedProp = ConnectedProps[I,entity]
+    }
+    #print(ConnectedProps) #debug array
+    
+    # Let's get the owner of the burning prop
+    local Owner = ConnectedProp:owner():name()
+    
+    MSG = Owner + " killed "+Victim:name()+" by igniting prop id: "+ConnectedProp:id()
+    print(MSG)
+    #concmd("say "+MSG)
+    
+}
+
+

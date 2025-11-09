@@ -1,0 +1,75 @@
+@name Find vul
+@persist G:gtable
+@persist [Vulnerable Ignore]:table Players:array
+@persist CurrentPlayerIndex Tick MaxTick Setup
+
+if(first())
+{
+    G=gTable("Ben",1)
+    
+    MaxTick = 50
+    
+    Vulnerable = table()
+    Ignore = table()
+    
+    CurrentPlayerIndex = 1
+    Tick = 0
+    
+    Players = players()
+    
+    Setup = 0
+}
+
+event tick()
+{
+    if(!Setup)
+    {
+        Tick += 1
+        
+        if(CurrentPlayerIndex > Players:count()){ Setup = 1, exit() }
+        
+        if(Tick >= 3)
+        {
+            
+            G[4,entity] = Players[CurrentPlayerIndex,entity]
+            G[2,string] = "+left"
+            G[3,number] = 1
+            
+            if(G[4,entity]:keyLeftTurn())
+            {
+                Vulnerable[G[4,entity]:steamID64(),number] = 1
+                G[2,string] = "-left"
+                G[3,number] = 1
+                
+                Tick = 0
+                CurrentPlayerIndex += 1
+                
+                print(G[4,entity]:name() + " is vulnerable")
+            }
+            
+            if(Tick >= MaxTick){
+                Tick = 0
+                
+                Ignore[G[4,entity]:steamID64(),number] = 1
+                CurrentPlayerIndex += 1
+            }
+            
+        }
+    }else
+    {
+        # Go through all vulnerable players who are still spinning due to lag
+        const Keys = Vulnerable:keys()
+        for(I=1,Keys:count())
+        {   
+            const STEAM = Keys[I,string]
+            G[4,entity] = findPlayerBySteamID64(STEAM)
+            G[2,string] = "-left"
+            G[3,number] = 1
+        }
+    }
+
+}
+
+#concmd("+walkleft")
+
+
